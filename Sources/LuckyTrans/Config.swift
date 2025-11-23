@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 struct Config {
     // 默认 API 端点

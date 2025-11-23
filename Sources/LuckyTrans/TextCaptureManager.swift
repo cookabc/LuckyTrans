@@ -97,9 +97,10 @@ class TextCaptureManager {
         }
         
         // 解析选中范围（AXValue 格式）
-        if let rangeValue = selectedRange as? AXValue {
+        if CFGetTypeID(selectedRange as CFTypeRef) == AXValueGetTypeID() {
+            let rangeValue = selectedRange as! AXValue
             var range = CFRange()
-            if AXValueGetValue(rangeValue, .range, &range) {
+            if AXValueGetValue(rangeValue, .cfRange, &range) {
                 let start = text.index(text.startIndex, offsetBy: range.location)
                 let end = text.index(start, offsetBy: range.length)
                 return String(text[start..<end])

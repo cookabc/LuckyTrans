@@ -23,35 +23,48 @@ class ShortcutManager {
         var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
         
         // 安装事件处理器
-        InstallApplicationEventHandler({ (nextHandler, theEvent, userData) -> OSStatus in
-            var hotKeyID = EventHotKeyID()
-            let err = GetEventParameter(
-                theEvent,
-                EventParamName(kEventParamDirectObject),
-                EventParamType(typeEventHotKeyID),
-                nil,
-                MemoryLayout<EventHotKeyID>.size,
-                nil,
-                &hotKeyID
-            )
-            
-            if err == noErr {
-                if let manager = Unmanaged<ShortcutManager>.fromOpaque(userData!).takeUnretainedValue() as ShortcutManager? {
-                    DispatchQueue.main.async {
-                        manager.delegate?.shortcutDidTrigger()
+        var handlerRef: EventHandlerRef?
+        let handlerStatus = InstallEventHandler(
+            GetApplicationEventTarget(),
+            { (nextHandler, theEvent, userData) -> OSStatus in
+                var hotKeyID = EventHotKeyID()
+                let err = GetEventParameter(
+                    theEvent,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
+                
+                if err == noErr {
+                    if let manager = Unmanaged<ShortcutManager>.fromOpaque(userData!).takeUnretainedValue() as ShortcutManager? {
+                        DispatchQueue.main.async {
+                            manager.delegate?.shortcutDidTrigger()
+                        }
                     }
                 }
-            }
-            
-            return noErr
-        }, 1, &eventSpec, Unmanaged.passUnretained(self).toOpaque(), nil)
+                
+                return noErr
+            },
+            1,
+            &eventSpec,
+            Unmanaged.passUnretained(self).toOpaque(),
+            &handlerRef
+        )
+        
+        guard handlerStatus == noErr else {
+            print("Failed to install event handler: \(handlerStatus)")
+            return
+        }
         
         // 注册快捷键：Cmd + Shift + T
         let modifiers = UInt32(cmdKey | shiftKey)
         let keyCode = UInt32(0x11) // 'T' key
         
         var hotKeyRef: EventHotKeyRef?
-        let status = RegisterEventHotKey(
+        let hotKeyStatus = RegisterEventHotKey(
             keyCode,
             modifiers,
             hotKeyID,
@@ -60,7 +73,7 @@ class ShortcutManager {
             &hotKeyRef
         )
         
-        if status == noErr {
+        if hotKeyStatus == noErr {
             self.hotKeyRef = hotKeyRef
         }
     }

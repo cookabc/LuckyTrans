@@ -9,7 +9,7 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .library(
+        .executable(
             name: "LuckyTrans",
             targets: ["LuckyTrans"]
         ),
@@ -18,7 +18,7 @@ let package = Package(
         // 可以添加第三方依赖，如 MASShortcut 用于快捷键管理
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "LuckyTrans",
             dependencies: []
         ),
