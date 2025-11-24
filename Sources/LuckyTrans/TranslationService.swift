@@ -35,7 +35,8 @@ class TranslationService {
         // 调试信息：打印请求 URL
         print("Translation API Request URL: \(url.absoluteString)")
         
-        let request = TranslationRequest(text: text, targetLanguage: targetLanguage)
+        let modelName = SettingsManager.shared.modelName
+        let request = TranslationRequest(text: text, targetLanguage: targetLanguage, model: modelName)
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"

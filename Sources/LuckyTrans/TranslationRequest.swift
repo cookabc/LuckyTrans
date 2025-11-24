@@ -10,8 +10,8 @@ struct TranslationRequest: Codable {
         let content: String
     }
     
-    init(text: String, targetLanguage: String) {
-        self.model = "gpt-3.5-turbo"
+    init(text: String, targetLanguage: String, model: String = "gpt-3.5-turbo") {
+        self.model = model
         self.temperature = 0.3
         
         let systemPrompt = "You are a professional translator. Translate the following text to \(targetLanguage). Only return the translation, without any explanations or additional text."

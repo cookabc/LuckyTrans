@@ -12,6 +12,9 @@ struct Config {
     // 默认目标语言
     static let defaultTargetLanguage = "中文"
     
+    // 默认模型名称
+    static let defaultModelName = "gpt-3.5-turbo"
+    
     // 应用标识
     static let bundleIdentifier = "com.luckytrans.app"
     

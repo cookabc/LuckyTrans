@@ -1,19 +1,19 @@
 import Foundation
 
 struct TranslationResponse: Codable {
-    let id: String
-    let object: String
-    let created: Int
-    let model: String
+    let id: String?
+    let object: String?
+    let created: Int?
+    let model: String?
     let choices: [Choice]
     
     struct Choice: Codable {
-        let index: Int
+        let index: Int?
         let message: Message
-        let finishReason: String
+        let finishReason: String?
         
         struct Message: Codable {
-            let role: String
+            let role: String?
             let content: String
         }
         
@@ -25,7 +25,11 @@ struct TranslationResponse: Codable {
     }
     
     var translation: String? {
-        return choices.first?.message.content
+        // 兼容不同的响应格式
+        if let firstChoice = choices.first {
+            return firstChoice.message.content
+        }
+        return nil
     }
 }
 

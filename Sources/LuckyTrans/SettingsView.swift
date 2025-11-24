@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var apiKey: String = ""
     @State private var showAPIKey: Bool = false
     @State private var apiEndpoint: String = Config.defaultAPIEndpoint
+    @State private var modelName: String = Config.defaultModelName
     
     private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
     
@@ -78,6 +79,19 @@ struct SettingsView: View {
                         Text(language).tag(language)
                     }
                 }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("模型名称")
+                        .font(.headline)
+                    TextField("Model Name", text: $modelName)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: modelName) { newValue in
+                            settingsManager.modelName = newValue
+                        }
+                    Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6 等")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             Section(header: Text("快捷键")) {
@@ -98,6 +112,7 @@ struct SettingsView: View {
         .frame(width: 500, height: 600)
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
+            modelName = settingsManager.modelName
             if let savedKey = settingsManager.getAPIKey() {
                 apiKey = savedKey
             }
