@@ -73,7 +73,15 @@ extension AppDelegate: ShortcutManagerDelegate {
         
         // 获取选中的文本
         guard let selectedText = TextCaptureManager.shared.getSelectedText() else {
-            showError("无法获取选中的文本，请确保已授予辅助功能权限")
+            // 检查权限状态
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+            let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
+            
+            if hasPermission {
+                showError("无法获取选中的文本。\n\n可能的原因：\n1. 当前应用不支持文本选择\n2. 请先选中文本再按快捷键\n3. 尝试在文本编辑器或浏览器中使用")
+            } else {
+                showError("无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans")
+            }
             return
         }
         

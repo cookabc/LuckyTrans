@@ -20,17 +20,37 @@ class TextCaptureManager {
         // 检查权限
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         guard AXIsProcessTrustedWithOptions(options as CFDictionary) else {
+            print("TextCapture: 辅助功能权限未授予")
             return nil
         }
         
         // 获取当前焦点应用
         guard let focusedApp = NSWorkspace.shared.frontmostApplication else {
+            print("TextCapture: 无法获取当前焦点应用")
             return nil
         }
         
         let pid = focusedApp.processIdentifier
         let appElement = AXUIElementCreateApplication(pid)
+        print("TextCapture: 当前焦点应用: \(focusedApp.localizedName ?? "未知") (PID: \(pid))")
         
+        // 方法 1: 尝试从焦点元素获取
+        if let text = getSelectedTextFromFocusedElement(appElement: appElement) {
+            print("TextCapture: 从焦点元素获取到文本: \(text.prefix(50))")
+            return text
+        }
+        
+        // 方法 2: 尝试从所有窗口获取
+        if let text = getSelectedTextFromAllWindows(appElement: appElement) {
+            print("TextCapture: 从窗口获取到文本: \(text.prefix(50))")
+            return text
+        }
+        
+        print("TextCapture: 无法通过辅助功能 API 获取选中文本")
+        return nil
+    }
+    
+    private func getSelectedTextFromFocusedElement(appElement: AXUIElement) -> String? {
         // 获取焦点窗口
         var focusedWindow: AnyObject?
         let result = AXUIElementCopyAttributeValue(
@@ -55,7 +75,7 @@ class TextCaptureManager {
             return nil
         }
         
-        // 获取选中文本
+        // 尝试直接获取选中文本
         var selectedText: AnyObject?
         let textResult = AXUIElementCopyAttributeValue(
             element as! AXUIElement,
@@ -69,6 +89,61 @@ class TextCaptureManager {
         
         // 如果直接获取失败，尝试获取所有文本然后提取选中部分
         return getSelectedTextFromElement(element as! AXUIElement)
+    }
+    
+    private func getSelectedTextFromAllWindows(appElement: AXUIElement) -> String? {
+        // 获取所有窗口
+        var windows: AnyObject?
+        let result = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXWindowsAttribute as CFString,
+            &windows
+        )
+        
+        guard result == .success, let windowsArray = windows as? [AXUIElement] else {
+            return nil
+        }
+        
+        // 遍历所有窗口，查找有选中文本的
+        for window in windowsArray {
+            // 尝试从窗口的主元素获取选中文本
+            if let text = getSelectedTextFromWindow(window) {
+                return text
+            }
+        }
+        
+        return nil
+    }
+    
+    private func getSelectedTextFromWindow(_ window: AXUIElement) -> String? {
+        // 获取窗口的所有子元素
+        var children: AnyObject?
+        let result = AXUIElementCopyAttributeValue(
+            window,
+            kAXChildrenAttribute as CFString,
+            &children
+        )
+        
+        guard result == .success, let childrenArray = children as? [AXUIElement] else {
+            return nil
+        }
+        
+        // 递归查找有选中文本的元素
+        for child in childrenArray {
+            // 检查是否有选中文本
+            var selectedText: AnyObject?
+            if AXUIElementCopyAttributeValue(child, kAXSelectedTextAttribute as CFString, &selectedText) == .success,
+               let text = selectedText as? String, !text.isEmpty {
+                return text
+            }
+            
+            // 递归检查子元素
+            if let text = getSelectedTextFromWindow(child) {
+                return text
+            }
+        }
+        
+        return nil
     }
     
     private func getSelectedTextFromElement(_ element: AXUIElement) -> String? {
@@ -111,14 +186,17 @@ class TextCaptureManager {
     }
     
     private func getSelectedTextViaClipboard() -> String? {
+        print("TextCapture: 尝试使用剪贴板方法获取选中文本")
+        
         // 保存当前剪贴板内容
         let pasteboard = NSPasteboard.general
         let previousContents = pasteboard.string(forType: .string)
         
         // 模拟 Cmd+C
         let source = CGEventSource(stateID: .hidSystemState)
-        let keyDownEvent = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true) // 'C' key
-        let keyUpEvent = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false)
+        let keyCode: CGKeyCode = 0x08 // 'C' key
+        let keyDownEvent = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
+        let keyUpEvent = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
         
         keyDownEvent?.flags = .maskCommand
         keyUpEvent?.flags = .maskCommand
@@ -126,8 +204,8 @@ class TextCaptureManager {
         keyDownEvent?.post(tap: .cghidEventTap)
         keyUpEvent?.post(tap: .cghidEventTap)
         
-        // 等待剪贴板更新
-        Thread.sleep(forTimeInterval: 0.1)
+        // 等待剪贴板更新（增加等待时间）
+        Thread.sleep(forTimeInterval: 0.2)
         
         // 获取新内容
         let newContents = pasteboard.string(forType: .string)
@@ -138,7 +216,13 @@ class TextCaptureManager {
             pasteboard.setString(previous, forType: .string)
         }
         
-        return newContents
+        if let contents = newContents, !contents.isEmpty {
+            print("TextCapture: 从剪贴板获取到文本: \(contents.prefix(50))")
+            return contents
+        }
+        
+        print("TextCapture: 剪贴板方法也失败")
+        return nil
     }
 }
 

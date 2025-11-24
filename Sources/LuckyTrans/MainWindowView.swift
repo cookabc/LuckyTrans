@@ -81,8 +81,17 @@ struct MainWindowView: View {
     private func getSelectedTextFromSystem() {
         if let text = TextCaptureManager.shared.getSelectedText() {
             selectedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            errorMessage = nil
         } else {
-            errorMessage = "无法获取选中的文本，请确保已授予辅助功能权限"
+            // 检查权限状态
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+            let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
+            
+            if hasPermission {
+                errorMessage = "无法获取选中的文本。请先选中文本，或尝试在文本编辑器中使用。"
+            } else {
+                errorMessage = "无法获取选中的文本，请确保已授予辅助功能权限"
+            }
         }
     }
     
