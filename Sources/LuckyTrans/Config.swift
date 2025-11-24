@@ -7,7 +7,7 @@ struct Config {
     
     // 默认快捷键
     static let defaultShortcutKey = "T"
-    static let defaultShortcutModifiers: NSEvent.ModifierFlags = [.command, .shift]
+    static let defaultShortcutModifiers: NSEvent.ModifierFlags = [.command]
     
     // 默认目标语言
     static let defaultTargetLanguage = "中文"

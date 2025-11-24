@@ -59,8 +59,8 @@ class ShortcutManager {
             return
         }
         
-        // 注册快捷键：Cmd + Shift + T
-        let modifiers = UInt32(cmdKey | shiftKey)
+        // 注册快捷键：Cmd + T
+        let modifiers = UInt32(cmdKey)
         let keyCode = UInt32(0x11) // 'T' key
         
         var hotKeyRef: EventHotKeyRef?

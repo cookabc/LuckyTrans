@@ -136,7 +136,7 @@ struct SettingsView: View {
                             Text("快捷键")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            Text("⌘⇧T")
+                            Text("⌘T")
                                 .font(.body)
                                 .monospaced()
                             Text("快捷键配置功能即将推出")
@@ -168,7 +168,7 @@ struct SettingsView: View {
                 Divider()
                 HStack {
                     Spacer()
-                    Button("保存所有设置") {
+                    Button("保存") {
                         saveAllSettings()
                     }
                     .buttonStyle(.borderedProminent)
