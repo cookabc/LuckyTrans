@@ -42,6 +42,32 @@ struct MainWindowView: View {
                 await MainActor.run {
                     translation = result
                     isTranslating = false
+                    errorMessage = nil
+                }
+            } catch let translationError as TranslationError {
+                await MainActor.run {
+                    let errorMsg = translationError.error.message
+                    let errorType = translationError.error.type ?? "unknown_error"
+                    errorMessage = "翻译失败: \(errorMsg) (类型: \(errorType))"
+                    isTranslating = false
+                }
+            } catch let urlError as URLError {
+                await MainActor.run {
+                    var errorMsg = "网络连接失败"
+                    switch urlError.code {
+                    case .notConnectedToInternet:
+                        errorMsg = "未连接到互联网"
+                    case .timedOut:
+                        errorMsg = "请求超时，请检查网络连接"
+                    case .cannotFindHost:
+                        errorMsg = "无法找到服务器，请检查 API 端点配置"
+                    case .cannotConnectToHost:
+                        errorMsg = "无法连接到服务器"
+                    default:
+                        errorMsg = "网络错误: \(urlError.localizedDescription)"
+                    }
+                    errorMessage = errorMsg
+                    isTranslating = false
                 }
             } catch {
                 await MainActor.run {

@@ -29,7 +29,7 @@ struct TranslationResponse: Codable {
     }
 }
 
-struct TranslationError: Codable, Error {
+struct TranslationError: Codable, Error, LocalizedError {
     let error: ErrorDetail
     
     struct ErrorDetail: Codable {
@@ -40,6 +40,14 @@ struct TranslationError: Codable, Error {
     
     var localizedDescription: String {
         return error.message
+    }
+    
+    var errorDescription: String? {
+        return error.message
+    }
+    
+    var failureReason: String? {
+        return error.type
     }
 }
 
