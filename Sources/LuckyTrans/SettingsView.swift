@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showAPIKey: Bool = false
     @State private var apiEndpoint: String = Config.defaultAPIEndpoint
     @State private var modelName: String = Config.defaultModelName
+    @State private var hasSavedKey: Bool = false
     
     private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
     
@@ -38,16 +39,34 @@ struct SettingsView: View {
                             TextField("API Key", text: $apiKey)
                                 .textFieldStyle(.roundedBorder)
                         } else {
-                            SecureField("API Key", text: $apiKey)
+                            // 使用 SecureField，如果有已保存的 key 但输入框为空，显示占位符
+                            SecureField(hasSavedKey && apiKey.isEmpty ? "••••••••••••" : "API Key", text: $apiKey)
                                 .textFieldStyle(.roundedBorder)
                         }
                         Button(showAPIKey ? "隐藏" : "显示") {
+                            if !showAPIKey {
+                                // 点击"显示"时，加载真实的 key
+                                if apiKey.isEmpty && hasSavedKey {
+                                    if let savedKey = settingsManager.getAPIKey() {
+                                        apiKey = savedKey
+                                    }
+                                }
+                            } else {
+                                // 点击"隐藏"时，如果已保存，清空输入框（SecureField 会显示星号占位符）
+                                if hasSavedKey {
+                                    apiKey = ""
+                                }
+                            }
                             showAPIKey.toggle()
                         }
                     }
                     Button("保存 API Key") {
                         if settingsManager.saveAPIKey(apiKey) {
-                            apiKey = ""
+                            hasSavedKey = true
+                            // 保存后，如果不显示，清空输入框（SecureField 会显示星号占位符）
+                            if !showAPIKey {
+                                apiKey = ""
+                            }
                             // 显示成功提示
                             let alert = NSAlert()
                             alert.messageText = "保存成功"
@@ -63,7 +82,7 @@ struct SettingsView: View {
                             alert.runModal()
                         }
                     }
-                    .disabled(apiKey.isEmpty)
+                    .disabled(apiKey.isEmpty && !hasSavedKey)
                     
                     if settingsManager.hasAPIKey() {
                         Text("已保存 API Key")
@@ -74,20 +93,32 @@ struct SettingsView: View {
             }
             
             Section(header: Text("翻译设置")) {
-                Picker("目标语言", selection: $settingsManager.targetLanguage) {
-                    ForEach(languages, id: \.self) { language in
-                        Text(language).tag(language)
+                HStack {
+                    Picker("目标语言", selection: $settingsManager.targetLanguage) {
+                        ForEach(languages, id: \.self) { language in
+                            Text(language).tag(language)
+                        }
                     }
+                    Button("保存") {
+                        // targetLanguage 通过 @Published 自动保存，这里只是确认
+                    }
+                    .buttonStyle(.bordered)
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("模型名称")
                         .font(.headline)
-                    TextField("Model Name", text: $modelName)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: modelName) { newValue in
-                            settingsManager.modelName = newValue
+                    HStack {
+                        TextField("Model Name", text: $modelName)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: modelName) { newValue in
+                                settingsManager.modelName = newValue
+                            }
+                        Button("保存") {
+                            settingsManager.modelName = modelName
                         }
+                        .buttonStyle(.bordered)
+                    }
                     Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6 等")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -113,7 +144,12 @@ struct SettingsView: View {
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
-            if let savedKey = settingsManager.getAPIKey() {
+            hasSavedKey = settingsManager.hasAPIKey()
+            // 如果有已保存的 key，默认显示星号（通过 SecureField）
+            if hasSavedKey {
+                // 不直接设置 apiKey，让 SecureField 显示星号
+                // 用户点击"显示"时再加载真实值
+            } else if let savedKey = settingsManager.getAPIKey() {
                 apiKey = savedKey
             }
         }
