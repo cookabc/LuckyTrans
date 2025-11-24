@@ -4,6 +4,22 @@ struct MainWindowView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var showSettings = false
     
+    private func openSettingsWindow() {
+        // 使用 NSApplication 的方法打开设置窗口
+        // macOS 13+ 使用 showSettingsWindow:, macOS 12 使用 showPreferencesWindow:
+        if #available(macOS 13, *) {
+            // 尝试 showSettingsWindow: 方法
+            if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
+                NSApp.perform(Selector(("showSettingsWindow:")), with: nil)
+            } else {
+                // 回退到 showPreferencesWindow:
+                NSApp.perform(Selector(("showPreferencesWindow:")), with: nil)
+            }
+        } else {
+            NSApp.perform(Selector(("showPreferencesWindow:")), with: nil)
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             // 应用图标和标题
@@ -51,8 +67,7 @@ struct MainWindowView: View {
             // 操作按钮
             VStack(spacing: 12) {
                 Button(action: {
-                    showSettings = true
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    openSettingsWindow()
                 }) {
                     Label("打开设置", systemImage: "gearshape.fill")
                         .frame(maxWidth: .infinity)
@@ -79,7 +94,7 @@ struct MainWindowView: View {
             // 首次启动时，如果没有配置 API Key，自动打开设置窗口
             if !settingsManager.hasAPIKey() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    openSettingsWindow()
                 }
             }
         }

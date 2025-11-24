@@ -85,3 +85,4 @@ rm -rf .build LuckyTrans.app
 - 确保已授予辅助功能权限
 - 检查是否有其他应用占用了相同的快捷键
 
+

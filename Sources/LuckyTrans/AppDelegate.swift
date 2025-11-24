@@ -65,7 +65,11 @@ extension AppDelegate: ShortcutManagerDelegate {
         guard SettingsManager.shared.hasAPIKey() else {
             showError("请先在设置中配置 API Key")
             // 打开设置窗口
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+            if #available(macOS 13, *) {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            } else {
+                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+            }
             return
         }
         
