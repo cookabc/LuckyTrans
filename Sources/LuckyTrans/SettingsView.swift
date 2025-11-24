@@ -43,6 +43,19 @@ struct SettingsView: View {
                     Button("保存 API Key") {
                         if settingsManager.saveAPIKey(apiKey) {
                             apiKey = ""
+                            // 显示成功提示
+                            let alert = NSAlert()
+                            alert.messageText = "保存成功"
+                            alert.informativeText = "API Key 已安全保存到 Keychain"
+                            alert.alertStyle = .informational
+                            alert.runModal()
+                        } else {
+                            // 显示错误提示
+                            let alert = NSAlert()
+                            alert.messageText = "保存失败"
+                            alert.informativeText = "无法保存 API Key，请重试"
+                            alert.alertStyle = .warning
+                            alert.runModal()
                         }
                     }
                     .disabled(apiKey.isEmpty)

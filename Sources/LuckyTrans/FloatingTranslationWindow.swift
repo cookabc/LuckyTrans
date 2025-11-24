@@ -163,11 +163,7 @@ struct TranslationView: View {
                         Spacer()
                         
                         Button("打开设置") {
-                            if #available(macOS 13, *) {
-                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                            } else {
-                                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                            }
+                            SettingsWindowManager.shared.showSettings()
                             self.onClose()
                         }
                         .buttonStyle(.bordered)
