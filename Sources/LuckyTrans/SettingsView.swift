@@ -17,11 +17,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("API 端点")
                         .font(.headline)
-                    TextField("API Endpoint", text: $apiEndpoint)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: apiEndpoint) { newValue in
-                            settingsManager.apiEndpoint = newValue
+                    HStack {
+                        TextField("API Endpoint", text: $apiEndpoint)
+                            .textFieldStyle(.roundedBorder)
+                        Button("保存") {
+                            settingsManager.apiEndpoint = apiEndpoint
                         }
+                        .buttonStyle(.bordered)
+                    }
                     Text("支持 OpenAI compatible API，如本地部署的模型服务")
                         .font(.caption)
                         .foregroundColor(.secondary)
