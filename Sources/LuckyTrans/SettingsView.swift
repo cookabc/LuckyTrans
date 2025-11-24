@@ -12,116 +12,173 @@ struct SettingsView: View {
     private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
     
     var body: some View {
-        Form {
-            Section(header: Text("API 配置")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("API 端点")
-                        .font(.headline)
-                    TextField("API Endpoint", text: $apiEndpoint)
-                        .textFieldStyle(.roundedBorder)
-                    Text("支持 OpenAI compatible API，如本地部署的模型服务")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("示例: https://api.openai.com/v1/chat/completions")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .italic()
-                }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("API Key")
-                        .font(.headline)
-                    HStack {
-                        if showAPIKey {
-                            TextField("API Key", text: $apiKey)
+        VStack(spacing: 0) {
+            Form {
+                Section(header: Text("API 配置")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // API 端点
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("API 端点")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
                                 .textFieldStyle(.roundedBorder)
-                        } else {
-                            // 使用 SecureField，如果有已保存的 key，使用占位符显示星号
-                            SecureField("API Key", text: Binding(
-                                get: {
-                                    // 如果已保存且当前为空，返回占位符（SecureField 会显示为星号）
-                                    if hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
-                                        return "••••••••••••"
-                                    }
-                                    return apiKey
-                                },
-                                set: { newValue in
-                                    // 如果输入的是占位符，忽略
-                                    if newValue != "••••••••••••" {
-                                        apiKey = newValue
-                                    }
-                                }
-                            ))
-                            .textFieldStyle(.roundedBorder)
+                            Text("支持 OpenAI compatible API")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
-                        Button(showAPIKey ? "隐藏" : "显示") {
-                            if !showAPIKey {
-                                // 点击"显示"时，加载真实的 key
-                                if apiKey.isEmpty || apiKey == "••••••••••••" {
-                                    if let savedKey = settingsManager.getAPIKey() {
-                                        apiKey = savedKey
+                        
+                        Divider()
+                        
+                        // API Key
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("API Key")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                if settingsManager.hasAPIKey() {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.caption)
+                                        Text("已保存")
+                                            .font(.caption)
+                                            .foregroundColor(.green)
                                     }
-                                }
-                            } else {
-                                // 点击"隐藏"时，如果已保存，恢复占位符
-                                if hasSavedKey {
-                                    apiKey = "••••••••••••"
                                 }
                             }
-                            showAPIKey.toggle()
+                            
+                            HStack(spacing: 8) {
+                                if showAPIKey {
+                                    TextField("API Key", text: $apiKey)
+                                        .textFieldStyle(.roundedBorder)
+                                } else {
+                                    // 使用 SecureField，如果有已保存的 key，使用占位符显示星号
+                                    SecureField("API Key", text: Binding(
+                                        get: {
+                                            // 如果已保存且当前为空，返回占位符（SecureField 会显示为星号）
+                                            if hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
+                                                return "••••••••••••"
+                                            }
+                                            return apiKey
+                                        },
+                                        set: { newValue in
+                                            // 如果输入的是占位符，忽略
+                                            if newValue != "••••••••••••" {
+                                                apiKey = newValue
+                                            }
+                                        }
+                                    ))
+                                    .textFieldStyle(.roundedBorder)
+                                }
+                                Button(showAPIKey ? "隐藏" : "显示") {
+                                    if !showAPIKey {
+                                        // 点击"显示"时，加载真实的 key
+                                        if apiKey.isEmpty || apiKey == "••••••••••••" {
+                                            if let savedKey = settingsManager.getAPIKey() {
+                                                apiKey = savedKey
+                                            }
+                                        }
+                                    } else {
+                                        // 点击"隐藏"时，如果已保存，恢复占位符
+                                        if hasSavedKey {
+                                            apiKey = "••••••••••••"
+                                        }
+                                    }
+                                    showAPIKey.toggle()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
                         }
                     }
-                    
-                    if settingsManager.hasAPIKey() {
-                        Text("已保存 API Key")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                }
-            }
-            
-            Section(header: Text("翻译设置")) {
-                Picker("目标语言", selection: $settingsManager.targetLanguage) {
-                    ForEach(languages, id: \.self) { language in
-                        Text(language).tag(language)
-                    }
+                    .padding(.vertical, 4)
                 }
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("模型名称")
-                        .font(.headline)
-                    TextField("Model Name", text: $modelName)
-                        .textFieldStyle(.roundedBorder)
-                    Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6 等")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                Section(header: Text("翻译设置")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 目标语言
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("目标语言")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $settingsManager.targetLanguage) {
+                                ForEach(languages, id: \.self) { language in
+                                    Text(language).tag(language)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        Divider()
+                        
+                        // 模型名称
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("模型名称")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            TextField("gpt-3.5-turbo", text: $modelName)
+                                .textFieldStyle(.roundedBorder)
+                            Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                Section(header: Text("其他")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 快捷键
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("快捷键")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text("⌘⇧T")
+                                .font(.body)
+                                .monospaced()
+                            Text("快捷键配置功能即将推出")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Divider()
+                        
+                        // 权限
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("权限")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Button("检查辅助功能权限") {
+                                checkAccessibilityPermission()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(.vertical, 4)
                 }
             }
+            .formStyle(.grouped)
             
-            Section(header: Text("快捷键")) {
-                Text("默认快捷键: ⌘⇧T")
-                    .font(.body)
-                Text("快捷键配置功能即将推出")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Section(header: Text("权限")) {
-                Button("检查辅助功能权限") {
-                    checkAccessibilityPermission()
+            // 底部保存按钮
+            VStack(spacing: 0) {
+                Divider()
+                HStack {
+                    Spacer()
+                    Button("保存所有设置") {
+                        saveAllSettings()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .padding()
                 }
-            }
-            
-            Section {
-                Button("保存所有设置") {
-                    saveAllSettings()
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
+                .background(Color(NSColor.controlBackgroundColor))
             }
         }
-        .padding()
-        .frame(width: 500, height: 600)
+        .frame(width: 550, height: 650)
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
