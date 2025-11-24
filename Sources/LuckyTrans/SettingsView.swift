@@ -23,6 +23,10 @@ struct SettingsView: View {
                     Text("支持 OpenAI compatible API，如本地部署的模型服务")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    Text("示例: https://api.openai.com/v1/chat/completions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
