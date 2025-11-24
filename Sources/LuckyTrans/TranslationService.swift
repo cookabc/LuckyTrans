@@ -69,8 +69,13 @@ class TranslationService {
             
             if httpResponse.statusCode == 200 {
                 do {
+                    // 调试信息：打印响应内容（用于排查兼容性问题）
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("Translation API Response: \(responseString.prefix(500))")
+                    }
+                    
                     let translationResponse = try JSONDecoder().decode(TranslationResponse.self, from: data)
-                    if let translation = translationResponse.translation {
+                    if let translation = translationResponse.translation, !translation.isEmpty {
                         return translation.trimmingCharacters(in: .whitespacesAndNewlines)
                     } else {
                         // 调试信息：打印响应内容
@@ -78,7 +83,7 @@ class TranslationService {
                             print("Translation API Response (empty translation): \(responseString)")
                         }
                         throw TranslationError(error: TranslationError.ErrorDetail(
-                            message: "翻译结果为空，请检查 API 响应格式",
+                            message: "翻译结果为空，请检查 API 响应格式。如果使用 GLM-4.6，请确保 API 端点正确配置",
                             type: "api_error",
                             code: nil
                         ))
@@ -87,9 +92,10 @@ class TranslationService {
                     // 调试信息：打印解码错误和响应内容
                     if let responseString = String(data: data, encoding: .utf8) {
                         print("Translation API Response (decode error): \(responseString)")
+                        print("Decode Error: \(decodeError)")
                     }
                     throw TranslationError(error: TranslationError.ErrorDetail(
-                        message: "无法解析 API 响应: \(decodeError.localizedDescription)",
+                        message: "无法解析 API 响应: \(decodeError.localizedDescription)。请检查 API 响应格式是否兼容 OpenAI API",
                         type: "api_error",
                         code: nil
                     ))
