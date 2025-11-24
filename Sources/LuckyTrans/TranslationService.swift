@@ -14,7 +14,28 @@ class TranslationService {
             ))
         }
         
-        let apiEndpoint = SettingsManager.shared.apiEndpoint
+        var apiEndpoint = SettingsManager.shared.apiEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 如果端点不以 /chat/completions 结尾，自动添加
+        // 支持 OpenAI compatible API 的标准路径
+        if !apiEndpoint.hasSuffix("/chat/completions") && !apiEndpoint.hasSuffix("/chat/completions/") {
+            // 移除末尾的斜杠
+            if apiEndpoint.hasSuffix("/") {
+                apiEndpoint = String(apiEndpoint.dropLast())
+            }
+            // 检查是否已经有 /v1 或 /v4 等版本路径
+            if apiEndpoint.contains("/v1/") || apiEndpoint.contains("/v4/") {
+                // 如果已经有版本路径，直接添加 chat/completions
+                apiEndpoint = apiEndpoint + "/chat/completions"
+            } else if apiEndpoint.contains("/v1") || apiEndpoint.contains("/v4") {
+                // 如果版本路径在末尾，添加 /chat/completions
+                apiEndpoint = apiEndpoint + "/chat/completions"
+            } else {
+                // 如果没有版本路径，添加 /v1/chat/completions（OpenAI 标准）
+                apiEndpoint = apiEndpoint + "/v1/chat/completions"
+            }
+        }
+        
         guard let url = URL(string: apiEndpoint) else {
             throw TranslationError(error: TranslationError.ErrorDetail(
                 message: "无效的 API 端点格式: \(apiEndpoint)",
@@ -34,6 +55,8 @@ class TranslationService {
         
         // 调试信息：打印请求 URL
         print("Translation API Request URL: \(url.absoluteString)")
+        print("Translation API Endpoint (original): \(SettingsManager.shared.apiEndpoint)")
+        print("Translation API Endpoint (final): \(apiEndpoint)")
         
         let modelName = SettingsManager.shared.modelName
         let request = TranslationRequest(text: text, targetLanguage: targetLanguage, model: modelName)
@@ -108,7 +131,10 @@ class TranslationService {
                 // 根据状态码提供有用的提示
                 switch httpResponse.statusCode {
                 case 404:
-                    helpfulHint = "\n提示: 请检查 API 端点是否正确。OpenAI API 端点应为: https://api.openai.com/v1/chat/completions"
+                    helpfulHint = "\n提示: API 端点不存在 (404)。\n" +
+                    "• 如果使用 OpenAI API，端点应为: https://api.openai.com/v1/chat/completions\n" +
+                    "• 如果使用其他兼容 API，请确保端点包含完整路径，例如: https://your-api.com/v1/chat/completions\n" +
+                    "• 当前使用的端点: \(apiEndpoint)"
                 case 401:
                     helpfulHint = "\n提示: API Key 可能无效或已过期，请检查 API Key 配置"
                 case 403:
