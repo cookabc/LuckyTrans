@@ -7,10 +7,12 @@ struct LuckyTransApp: App {
     @StateObject private var menuBarManager = MenuBarManager.shared
     
     var body: some Scene {
-        Settings {
-            SettingsView()
+        WindowGroup {
+            MainWindowView()
                 .environmentObject(settingsManager)
         }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 500, height: 400)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {
@@ -18,6 +20,11 @@ struct LuckyTransApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+        }
+        
+        Settings {
+            SettingsView()
+                .environmentObject(settingsManager)
         }
     }
 }

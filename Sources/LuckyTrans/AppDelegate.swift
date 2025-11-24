@@ -7,8 +7,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var translationWindow: FloatingTranslationWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 隐藏 Dock 图标，仅显示在菜单栏
-        NSApp.setActivationPolicy(.accessory)
+        // 保持 Dock 图标可见，这样用户可以看到主窗口
+        // NSApp.setActivationPolicy(.accessory)  // 注释掉，保留 Dock 图标
         
         // 初始化快捷键管理器
         shortcutManager = ShortcutManager()
@@ -19,6 +19,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // 检查辅助功能权限
         checkAccessibilityPermission()
+        
+        // 激活应用并显示窗口
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     func applicationWillTerminate(_ notification: Notification) {
