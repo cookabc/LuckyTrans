@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
@@ -22,8 +21,6 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    private let keychainService = Config.keychainService
-    
     private init() {
         // 从 UserDefaults 加载配置
         self.apiEndpoint = UserDefaults.standard.string(forKey: "apiEndpoint") ?? Config.defaultAPIEndpoint
@@ -31,48 +28,19 @@ class SettingsManager: ObservableObject {
         self.modelName = UserDefaults.standard.string(forKey: "modelName") ?? "gpt-3.5-turbo"
     }
     
-    // API Key 存储到 Keychain
+    // API Key 存储到 UserDefaults（不再使用 Keychain，避免每次启动需要密码）
     func saveAPIKey(_ apiKey: String) -> Bool {
-        guard let data = apiKey.data(using: .utf8) else { return false }
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: "apiKey",
-            kSecValueData as String: data
-        ]
-        
-        // 先删除旧的
-        SecItemDelete(query as CFDictionary)
-        
-        // 添加新的
-        let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        guard !apiKey.isEmpty else { return false }
+        UserDefaults.standard.set(apiKey, forKey: "apiKey")
+        return true
     }
     
     func getAPIKey() -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: "apiKey",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let apiKey = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        
-        return apiKey
+        return UserDefaults.standard.string(forKey: "apiKey")
     }
     
     func hasAPIKey() -> Bool {
-        return getAPIKey() != nil
+        return getAPIKey() != nil && !getAPIKey()!.isEmpty
     }
 }
 

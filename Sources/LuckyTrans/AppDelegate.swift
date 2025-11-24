@@ -29,10 +29,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func checkAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        // 检查是否已经授予权限，如果已授予就不再提示
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let accessEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary)
         
         if !accessEnabled {
+            // 只在未授予权限时提示，且不自动弹出系统提示
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.showAccessibilityPermissionAlert()
             }

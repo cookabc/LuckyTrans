@@ -17,8 +17,5 @@ struct Config {
     
     // 应用标识
     static let bundleIdentifier = "com.luckytrans.app"
-    
-    // Keychain 服务名
-    static let keychainService = "LuckyTransAPIKey"
 }
 

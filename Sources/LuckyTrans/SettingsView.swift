@@ -51,7 +51,7 @@ struct SettingsView: View {
                             // 显示成功提示
                             let alert = NSAlert()
                             alert.messageText = "保存成功"
-                            alert.informativeText = "API Key 已安全保存到 Keychain"
+                            alert.informativeText = "API Key 已保存"
                             alert.alertStyle = .informational
                             alert.runModal()
                         } else {
