@@ -24,8 +24,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 检查辅助功能权限
         checkAccessibilityPermission()
         
-        // 激活应用并显示窗口
-        NSApp.activate(ignoringOtherApps: true)
+        // 显示主窗口
+        MainWindowManager.shared.showMainWindow()
     }
     
     func applicationWillTerminate(_ notification: Notification) {

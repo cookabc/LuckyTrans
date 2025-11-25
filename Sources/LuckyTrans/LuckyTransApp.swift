@@ -7,13 +7,10 @@ struct LuckyTransApp: App {
     @StateObject private var menuBarManager = MenuBarManager.shared
     
     var body: some Scene {
-        WindowGroup {
-            MainWindowView()
-                .environmentObject(settingsManager)
+        // 使用 Settings 场景作为占位符，实际窗口由 MainWindowManager 管理
+        Settings {
+            EmptyView()
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 600, height: 500)
-        .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {

@@ -49,6 +49,11 @@ struct MenuBarView: View {
             
             Divider()
             
+            Button("显示主窗口") {
+                MainWindowManager.shared.showMainWindow()
+            }
+            .buttonStyle(.plain)
+            
             Button("设置") {
                 SettingsWindowManager.shared.showSettings()
             }
