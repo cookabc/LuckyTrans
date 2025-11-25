@@ -13,6 +13,7 @@ struct LuckyTransApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 600, height: 500)
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {

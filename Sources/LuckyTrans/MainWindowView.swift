@@ -6,6 +6,7 @@ struct MainWindowView: View {
     @State private var translation: String = ""
     @State private var isTranslating: Bool = false
     @State private var errorMessage: String?
+    @State private var translationTask: Task<Void, Never>?
     
     private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
     
@@ -28,31 +29,42 @@ struct MainWindowView: View {
             return
         }
         
+        // 取消之前的任务
+        translationTask?.cancel()
+        
         isTranslating = true
         errorMessage = nil
         translation = ""
         
-        Task {
+        translationTask = Task {
             do {
                 let result = try await TranslationService.shared.translate(
                     text: textToTranslate,
                     targetLanguage: settingsManager.targetLanguage
                 )
                 
+                // 检查任务是否被取消
+                guard !Task.isCancelled else { return }
+                
                 await MainActor.run {
+                    guard !Task.isCancelled else { return }
                     translation = result
                     isTranslating = false
                     errorMessage = nil
                 }
             } catch let translationError as TranslationError {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    guard !Task.isCancelled else { return }
                     let errorMsg = translationError.error.message
                     let errorType = translationError.error.type ?? "unknown_error"
                     errorMessage = "翻译失败: \(errorMsg) (类型: \(errorType))"
                     isTranslating = false
                 }
             } catch let urlError as URLError {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    guard !Task.isCancelled else { return }
                     var errorMsg = "网络连接失败"
                     switch urlError.code {
                     case .notConnectedToInternet:
@@ -70,7 +82,9 @@ struct MainWindowView: View {
                     isTranslating = false
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    guard !Task.isCancelled else { return }
                     errorMessage = "翻译失败: \(error.localizedDescription)"
                     isTranslating = false
                 }
@@ -308,10 +322,18 @@ struct MainWindowView: View {
         .onAppear {
             // 首次启动时，如果没有配置 API Key，自动打开设置窗口
             if !settingsManager.hasAPIKey() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak settingsManager] in
+                    // 检查窗口是否仍然存在
+                    guard settingsManager != nil else { return }
                     openSettingsWindow()
                 }
             }
+        }
+        .onDisappear {
+            // 窗口关闭时，取消所有异步任务
+            translationTask?.cancel()
+            translationTask = nil
+            isTranslating = false
         }
     }
 }

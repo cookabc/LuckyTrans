@@ -30,6 +30,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         shortcutManager?.unregister()
+        translationWindow?.close()
+        translationWindow = nil
+    }
+    
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // 即使主窗口关闭，应用也不退出（因为有菜单栏图标）
+        return false
     }
     
     private func checkAccessibilityPermission() {
