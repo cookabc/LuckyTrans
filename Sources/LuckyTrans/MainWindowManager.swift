@@ -1,15 +1,37 @@
 import SwiftUI
 import AppKit
 
+// 自定义窗口类，禁用所有关闭动画
+class NonAnimatedWindow: NSWindow {
+    override func close() {
+        // 在关闭前禁用所有动画
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.animations.removeAll()
+        
+        // 立即隐藏窗口，不使用动画
+        self.orderOut(nil)
+        
+        CATransaction.commit()
+        
+        // 调用 super.close() 但此时窗口已经隐藏
+        super.close()
+    }
+    
+    override func performClose(_ sender: Any?) {
+        // 拦截 performClose，直接关闭而不使用动画
+        self.close()
+    }
+}
+
 // 窗口关闭代理，禁用关闭动画
 class WindowCloseDelegate: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         // 禁用所有动画
-        window.animations.removeAll()
-        // 强制立即关闭，不使用动画
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        window.animations.removeAll()
         CATransaction.commit()
     }
 }
@@ -37,7 +59,8 @@ class MainWindowManager: ObservableObject {
         let hostingController = NSHostingController(rootView: mainView)
         hostingController.view.frame = NSRect(x: 0, y: 0, width: 650, height: 600)
         
-        let window = NSWindow(
+        // 使用自定义窗口类，禁用关闭动画
+        let window = NonAnimatedWindow(
             contentRect: NSRect(x: 0, y: 0, width: 650, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
@@ -63,6 +86,11 @@ class MainWindowManager: ObservableObject {
         
         // 禁用窗口关闭动画，直接关闭
         window.isReleasedWhenClosed = false
+        // 在创建时就禁用所有动画
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        window.animations.removeAll()
+        CATransaction.commit()
         
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
