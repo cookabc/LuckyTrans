@@ -39,15 +39,6 @@ class NonAnimatedWindow: NSWindow {
         // 拦截 performClose，直接关闭而不使用动画
         self.close()
     }
-    
-    override func willClose() {
-        // 在窗口即将关闭时，确保所有动画都被禁用
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        self.animations.removeAll()
-        CATransaction.commit()
-        super.willClose()
-    }
 }
 
 // 窗口关闭代理，禁用关闭动画
