@@ -29,19 +29,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func checkAccessibilityPermission() {
-        // 检查是否已经授予权限，如果已授予就不再提示
+        // 检查是否已经授予权限
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let accessEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary)
         
-        if !accessEnabled {
-            // 只在未授予权限时提示，且不自动弹出系统提示
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.showAccessibilityPermissionAlert()
-            }
+        // 如果权限已授予，直接返回
+        if accessEnabled {
+            return
+        }
+        
+        // 检查用户是否已经看到过提示（避免每次都弹出）
+        let hasShownAlert = UserDefaults.standard.bool(forKey: "hasShownAccessibilityAlert")
+        
+        // 如果已经显示过提示，就不再自动弹出
+        if hasShownAlert {
+            return
+        }
+        
+        // 只在首次启动且未授予权限时提示
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.showAccessibilityPermissionAlert()
         }
     }
     
     private func showAccessibilityPermissionAlert() {
+        // 标记已经显示过提示
+        UserDefaults.standard.set(true, forKey: "hasShownAccessibilityAlert")
+        
         let alert = NSAlert()
         alert.messageText = "需要辅助功能权限"
         alert.informativeText = "LuckyTrans 需要辅助功能权限来获取您选中的文本。请在系统设置中授予权限。"
@@ -71,17 +85,23 @@ extension AppDelegate: ShortcutManagerDelegate {
             return
         }
         
+        // 检查权限状态
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        // 如果没有权限，提示用户
+        if !hasPermission {
+            showError("无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans")
+            // 打开系统设置
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
+        
         // 获取选中的文本
         guard let selectedText = TextCaptureManager.shared.getSelectedText() else {
-            // 检查权限状态
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-            let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
-            
-            if hasPermission {
-                showError("无法获取选中的文本。\n\n可能的原因：\n1. 当前应用不支持文本选择\n2. 请先选中文本再按快捷键\n3. 尝试在文本编辑器或浏览器中使用")
-            } else {
-                showError("无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans")
-            }
+            showError("无法获取选中的文本。\n\n可能的原因：\n1. 当前应用不支持文本选择\n2. 请先选中文本再按快捷键\n3. 尝试在文本编辑器或浏览器中使用")
             return
         }
         
