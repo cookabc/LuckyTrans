@@ -1,10 +1,50 @@
 import SwiftUI
 import AppKit
+import QuartzCore
+
+// 设置窗口也使用自定义窗口类，禁用关闭动画
+class NonAnimatedSettingsWindow: NSWindow {
+    private var isClosing = false
+    
+    override func close() {
+        // 防止重复关闭
+        guard !isClosing else { return }
+        isClosing = true
+        
+        // 在关闭前禁用所有动画
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        
+        // 移除所有动画字典
+        self.animations.removeAll()
+        
+        // 立即隐藏窗口，不使用动画
+        self.orderOut(nil)
+        
+        // 强制完成所有待处理的动画
+        CATransaction.flush()
+        CATransaction.commit()
+        
+        // 不调用 super.close()，直接清理资源
+        // 这样可以避免系统创建动画对象
+        self.contentViewController = nil
+        self.delegate = nil
+        
+        // 通知窗口已关闭
+        NotificationCenter.default.post(name: NSWindow.willCloseNotification, object: self)
+    }
+    
+    override func performClose(_ sender: Any?) {
+        // 拦截 performClose，直接关闭而不使用动画
+        self.close()
+    }
+}
 
 class SettingsWindowManager: ObservableObject {
     static let shared = SettingsWindowManager()
     
     private var settingsWindow: NSWindow?
+    private var windowDelegate: WindowCloseDelegate?
     
     private init() {}
     
@@ -23,7 +63,8 @@ class SettingsWindowManager: ObservableObject {
         let hostingController = NSHostingController(rootView: settingsView)
         hostingController.view.frame = NSRect(x: 0, y: 0, width: 500, height: 600)
         
-        let window = NSWindow(
+        // 使用自定义窗口类，禁用关闭动画
+        let window = NonAnimatedSettingsWindow(
             contentRect: NSRect(x: 0, y: 0, width: 550, height: 650),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
@@ -32,6 +73,7 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
+        
         // 应用当前的主题设置
         let appearanceMode = SettingsManager.shared.appearanceMode
         let appearance: NSAppearance?
@@ -44,20 +86,40 @@ class SettingsWindowManager: ObservableObject {
             appearance = NSAppearance(named: .darkAqua)
         }
         window.appearance = appearance ?? NSAppearance.currentDrawing()
+        
+        // 禁用窗口关闭动画，直接关闭
+        window.isReleasedWhenClosed = false
+        // 在创建时就禁用所有动画
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        window.animations.removeAll()
+        CATransaction.commit()
+        
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
         self.settingsWindow = window
         
-        // 窗口关闭时清理
+        // 窗口关闭时清理，但不退出应用
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
             queue: .main
-        ) { [weak self] _ in
-            self?.settingsWindow = nil
+        ) { [weak self] notification in
+            guard let window = notification.object as? NSWindow else { return }
+            // 禁用所有动画，防止崩溃
+            window.animations.removeAll()
+            // 立即清理引用
+            if let self = self {
+                self.settingsWindow = nil
+                self.windowDelegate = nil
+            }
         }
+        
+        // 拦截窗口关闭，禁用动画
+        windowDelegate = WindowCloseDelegate()
+        window.delegate = windowDelegate
     }
 }
 
