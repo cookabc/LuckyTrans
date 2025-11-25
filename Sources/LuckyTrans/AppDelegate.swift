@@ -10,6 +10,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 保持 Dock 图标可见，这样用户可以看到主窗口
         // NSApp.setActivationPolicy(.accessory)  // 注释掉，保留 Dock 图标
         
+        // 应用保存的主题设置（SettingsManager 初始化时会自动应用）
+        // 这里确保在窗口创建前应用主题
+        _ = SettingsManager.shared
+        
         // 初始化快捷键管理器
         shortcutManager = ShortcutManager()
         shortcutManager?.delegate = self

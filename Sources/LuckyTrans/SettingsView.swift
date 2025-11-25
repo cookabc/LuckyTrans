@@ -129,6 +129,25 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
                 
+                Section(header: Text("外观")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 主题模式
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("主题模式")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $settingsManager.appearanceMode) {
+                                ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
+                                    Text(mode.displayName).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
                 Section(header: Text("其他")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 快捷键

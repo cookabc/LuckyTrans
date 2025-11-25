@@ -24,6 +24,9 @@ class FloatingTranslationWindow: NSWindow {
         self.isMovableByWindowBackground = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         
+        // 应用当前的主题设置
+        applyAppearance()
+        
         // 设置初始位置（屏幕右上角）
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
@@ -36,7 +39,24 @@ class FloatingTranslationWindow: NSWindow {
         }
     }
     
+    private func applyAppearance() {
+        let appearanceMode = SettingsManager.shared.appearanceMode
+        let appearance: NSAppearance?
+        switch appearanceMode {
+        case .system:
+            appearance = nil
+        case .light:
+            appearance = NSAppearance(named: .aqua)
+        case .dark:
+            appearance = NSAppearance(named: .darkAqua)
+        }
+        self.appearance = appearance ?? NSAppearance.currentDrawing()
+    }
+    
     func show(with state: TranslationWindowState) {
+        // 确保应用当前主题设置
+        applyAppearance()
+        
         let translationView = TranslationView(state: state) {
             self.close()
         }

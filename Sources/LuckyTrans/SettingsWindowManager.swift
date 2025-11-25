@@ -32,7 +32,18 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
-        window.appearance = NSAppearance.currentDrawing() // 跟随系统主题
+        // 应用当前的主题设置
+        let appearanceMode = SettingsManager.shared.appearanceMode
+        let appearance: NSAppearance?
+        switch appearanceMode {
+        case .system:
+            appearance = nil
+        case .light:
+            appearance = NSAppearance(named: .aqua)
+        case .dark:
+            appearance = NSAppearance(named: .darkAqua)
+        }
+        window.appearance = appearance ?? NSAppearance.currentDrawing()
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
