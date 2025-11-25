@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import QuartzCore
 
 // 自定义窗口类，禁用所有关闭动画
 class NonAnimatedWindow: NSWindow {
