@@ -24,7 +24,7 @@ class SettingsWindowManager: ObservableObject {
         hostingController.view.frame = NSRect(x: 0, y: 0, width: 500, height: 600)
         
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 650),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -32,6 +32,7 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
+        window.appearance = NSAppearance.currentDrawing() // 跟随系统主题
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

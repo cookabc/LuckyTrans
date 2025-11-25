@@ -86,11 +86,13 @@ struct TranslationView: View {
     let state: TranslationWindowState
     let onClose: () -> Void
     
+    @Environment(\.colorScheme) var colorScheme
+    
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
-                .shadow(radius: 10)
+                .shadow(color: colorScheme == .dark ? Color.black.opacity(0.5) : Color.black.opacity(0.2), radius: 10, x: 0, y: 2)
             
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
