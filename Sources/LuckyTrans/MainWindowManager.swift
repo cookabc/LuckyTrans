@@ -4,24 +4,49 @@ import QuartzCore
 
 // 自定义窗口类，禁用所有关闭动画
 class NonAnimatedWindow: NSWindow {
+    private var isClosing = false
+    
     override func close() {
+        // 防止重复关闭
+        guard !isClosing else { return }
+        isClosing = true
+        
         // 在关闭前禁用所有动画
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        
+        // 移除所有动画字典
         self.animations.removeAll()
         
         // 立即隐藏窗口，不使用动画
         self.orderOut(nil)
         
+        // 强制完成所有待处理的动画
+        CATransaction.flush()
         CATransaction.commit()
         
-        // 调用 super.close() 但此时窗口已经隐藏
-        super.close()
+        // 不调用 super.close()，直接清理资源
+        // 这样可以避免系统创建动画对象
+        self.contentViewController = nil
+        self.delegate = nil
+        
+        // 通知窗口已关闭
+        NotificationCenter.default.post(name: NSWindow.willCloseNotification, object: self)
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: self)
     }
     
     override func performClose(_ sender: Any?) {
         // 拦截 performClose，直接关闭而不使用动画
         self.close()
+    }
+    
+    override func willClose() {
+        // 在窗口即将关闭时，确保所有动画都被禁用
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.animations.removeAll()
+        CATransaction.commit()
+        super.willClose()
     }
 }
 
