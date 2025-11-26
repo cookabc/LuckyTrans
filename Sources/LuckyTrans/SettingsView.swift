@@ -15,7 +15,7 @@ struct SettingsView: View {
                 Section(header: Text("API 配置")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // API 端点
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("API 端点")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -27,7 +27,7 @@ struct SettingsView: View {
                         Divider()
                         
                         // API Key
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("API Key")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -79,7 +79,7 @@ struct SettingsView: View {
                         Divider()
                         
                         // 模型名称
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("模型名称")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -94,7 +94,7 @@ struct SettingsView: View {
                 Section(header: Text("外观")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 主题模式
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("主题模式")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -114,7 +114,7 @@ struct SettingsView: View {
                 Section(header: Text("其他")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 快捷键
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("快捷键")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -129,7 +129,7 @@ struct SettingsView: View {
                         Divider()
                         
                         // 权限
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
                             Text("权限")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
