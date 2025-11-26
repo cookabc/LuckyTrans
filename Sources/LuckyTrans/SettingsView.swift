@@ -14,6 +14,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
+                // API 配置：所有 API 相关的设置
                 Section(header: Text("API 配置")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // API 端点
@@ -92,25 +93,6 @@ struct SettingsView: View {
                                 .controlSize(.small)
                             }
                         }
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section(header: Text("翻译设置")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        // 目标语言
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("目标语言")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Picker("", selection: $settingsManager.targetLanguage) {
-                                ForEach(languages, id: \.self) { language in
-                                    Text(language).tag(language)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
                         
                         Divider()
                         
@@ -129,6 +111,47 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
                 
+                // 翻译设置：翻译行为相关的设置
+                Section(header: Text("翻译设置")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 目标语言
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("目标语言")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Picker("", selection: $settingsManager.targetLanguage) {
+                                ForEach(languages, id: \.self) { language in
+                                    Text(language).tag(language)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 快捷键设置：快捷键相关的设置
+                Section(header: Text("快捷键")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("全局快捷键")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            ShortcutRecorderView(
+                                keyCode: $settingsManager.shortcutKeyCode,
+                                modifiers: $settingsManager.shortcutModifiers
+                            )
+                            .frame(height: 24)
+                            Text("点击上方框设置快捷键，按 Esc 取消")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                // 外观设置：界面外观相关的设置
                 Section(header: Text("外观")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 主题模式
@@ -148,28 +171,12 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
                 
-                Section(header: Text("其他")) {
+                // 系统设置：系统权限相关的设置
+                Section(header: Text("系统")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        // 快捷键
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("快捷键")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            ShortcutRecorderView(
-                                keyCode: $settingsManager.shortcutKeyCode,
-                                modifiers: $settingsManager.shortcutModifiers
-                            )
-                            .frame(height: 24)
-                            Text("点击上方框设置快捷键，按 Esc 取消")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Divider()
-                        
                         // 权限
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("权限")
+                            Text("辅助功能权限")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Button("检查辅助功能权限") {
@@ -177,6 +184,9 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
+                            Text("需要此权限以获取选中的文本")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 4)
