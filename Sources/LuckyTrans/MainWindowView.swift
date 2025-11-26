@@ -180,7 +180,8 @@ struct MainWindowView: View {
                         TextEditor(text: $selectedText)
                             .font(.body)
                             .scrollContentBackground(.hidden)
-                            .padding(8)
+                            .padding(.leading, 8)
+                            .padding(.top, 10)
                             .frame(minHeight: 150)
                         
                         if selectedText.isEmpty {
@@ -193,16 +194,6 @@ struct MainWindowView: View {
                                 .allowsHitTesting(false)
                         }
                     }
-                    .coordinateSpace(name: "ZStack")
-                    .background(
-                        GeometryReader { geometry in
-                            Color.clear
-                                .onAppear {
-                                    let frame = geometry.frame(in: .local)
-                                    print("ZStack frame: x=\(frame.minX), y=\(frame.minY), width=\(frame.width), height=\(frame.height)")
-                                }
-                        }
-                    )
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
@@ -294,7 +285,7 @@ struct MainWindowView: View {
                                     .font(.body)
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(8)
+                                    .padding(12)
                             } else if let error = errorMessage, !error.isEmpty {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -304,7 +295,7 @@ struct MainWindowView: View {
                                         .foregroundColor(.red)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(8)
+                                .padding(12)
                             } else {
                                 HStack {
                                     Spacer()
