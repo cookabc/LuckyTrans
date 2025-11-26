@@ -37,7 +37,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
     }
     
     class Coordinator: NSObject {
-        weak var parent: ShortcutRecorderView?
+        var parent: ShortcutRecorderView?
         var textField: NSTextField?
         var isRecording = false
         var keyCode: UInt32
