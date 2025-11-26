@@ -187,8 +187,8 @@ struct MainWindowView: View {
                             Text("输入要翻译的文本，或点击「获取选中文本」按钮")
                                 .font(.body)
                                 .foregroundColor(.secondary)
-                                .padding(.leading, 8)
-                                .padding(.top, 8)
+                                .padding(.leading, 4)
+                                .padding(.top, 4)
                                 .allowsHitTesting(false)
                         }
                     }
