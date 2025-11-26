@@ -34,11 +34,11 @@ struct SettingsView: View {
                                 .frame(width: 80, alignment: .leading)
                             HStack(spacing: 8) {
                                 if showAPIKey {
-                                    TextField("API Key", text: $apiKey)
+                                    TextField("", text: $apiKey)
                                         .textFieldStyle(.roundedBorder)
                                 } else {
                                     // 使用 SecureField，如果有已保存的 key，使用占位符显示星号
-                                    SecureField("API Key", text: Binding(
+                                    SecureField("", text: Binding(
                                         get: {
                                             // 如果已保存且当前为空，返回占位符（SecureField 会显示为星号）
                                             if hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
