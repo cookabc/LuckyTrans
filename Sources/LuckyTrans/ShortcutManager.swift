@@ -10,20 +10,39 @@ class ShortcutManager {
     
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyID = EventHotKeyID(signature: FourCharCode(fromString: "LTrn"), id: 1)
+    private var handlerRef: EventHandlerRef?
     
     init() {
+        setupEventHandler()
         registerShortcut()
+        
+        // 监听快捷键变更通知
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(shortcutDidChange),
+            name: NSNotification.Name("ShortcutDidChange"),
+            object: nil
+        )
     }
     
     deinit {
         unregister()
+        if let handlerRef = handlerRef {
+            RemoveEventHandler(handlerRef)
+        }
+        NotificationCenter.default.removeObserver(self)
     }
     
-    func registerShortcut() {
+    @objc private func shortcutDidChange() {
+        // 重新注册快捷键
+        unregister()
+        registerShortcut()
+    }
+    
+    private func setupEventHandler() {
         var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
         
         // 安装事件处理器
-        var handlerRef: EventHandlerRef?
         let handlerStatus = InstallEventHandler(
             GetApplicationEventTarget(),
             { (nextHandler, theEvent, userData) -> OSStatus in
@@ -58,10 +77,13 @@ class ShortcutManager {
             print("Failed to install event handler: \(handlerStatus)")
             return
         }
-        
-        // 注册快捷键：Cmd + T
-        let modifiers = UInt32(cmdKey)
-        let keyCode = UInt32(0x11) // 'T' key
+    }
+    
+    func registerShortcut() {
+        // 从 SettingsManager 获取快捷键设置
+        let settings = SettingsManager.shared
+        let keyCode = settings.shortcutKeyCode
+        let modifiers = settings.shortcutModifiers
         
         var hotKeyRef: EventHotKeyRef?
         let hotKeyStatus = RegisterEventHotKey(
@@ -75,6 +97,8 @@ class ShortcutManager {
         
         if hotKeyStatus == noErr {
             self.hotKeyRef = hotKeyRef
+        } else {
+            print("Failed to register hotkey: \(hotKeyStatus)")
         }
     }
     

@@ -155,10 +155,12 @@ struct SettingsView: View {
                             Text("快捷键")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            Text("⌘T")
-                                .font(.body)
-                                .monospaced()
-                            Text("快捷键配置功能即将推出")
+                            ShortcutRecorderView(
+                                keyCode: $settingsManager.shortcutKeyCode,
+                                modifiers: $settingsManager.shortcutModifiers
+                            )
+                            .frame(height: 24)
+                            Text("点击上方框设置快捷键，按 Esc 取消")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
