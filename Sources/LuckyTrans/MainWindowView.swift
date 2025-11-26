@@ -189,19 +189,11 @@ struct MainWindowView: View {
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.leading, 12)
-                                .padding(.top, 12)
-                                .background(
-                                    GeometryReader { geometry in
-                                        Color.clear
-                                            .onAppear {
-                                                let frame = geometry.frame(in: .local)
-                                                print("Placeholder text frame: x=\(frame.minX), y=\(frame.minY), width=\(frame.width), height=\(frame.height)")
-                                            }
-                                    }
-                                )
+                                .padding(.top, 10)
                                 .allowsHitTesting(false)
                         }
                     }
+                    .coordinateSpace(name: "ZStack")
                     .background(
                         GeometryReader { geometry in
                             Color.clear
