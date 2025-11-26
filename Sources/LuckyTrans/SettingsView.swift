@@ -28,17 +28,10 @@ struct SettingsView: View {
                         
                         // API Key
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            HStack(spacing: 8) {
-                                Text("API Key")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 80, alignment: .leading)
-                                if settingsManager.hasAPIKey() {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                        .font(.caption)
-                                }
-                            }
+                            Text("API Key")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
                             HStack(spacing: 8) {
                                 if showAPIKey {
                                     TextField("API Key", text: $apiKey)
