@@ -187,9 +187,9 @@ struct MainWindowView: View {
                             Text("输入要翻译的文本，或点击「获取选中文本」按钮")
                                 .font(.body)
                                 .foregroundColor(.secondary)
-                                .padding(.leading, 8)
-                                .padding(.top, 8)
-                                .offset(x: 4, y: 6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 12)
+                                .padding(.top, 12)
                                 .background(
                                     GeometryReader { geometry in
                                         Color.clear
