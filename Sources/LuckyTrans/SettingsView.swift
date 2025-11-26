@@ -20,7 +20,7 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
+                            TextField("", text: $apiEndpoint)
                                 .textFieldStyle(.roundedBorder)
                         }
                         
@@ -84,7 +84,7 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            TextField("gpt-3.5-turbo", text: $modelName)
+                            TextField("", text: $modelName)
                                 .textFieldStyle(.roundedBorder)
                         }
                     }
