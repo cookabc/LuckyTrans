@@ -22,6 +22,8 @@ struct SettingsView: View {
                                 .frame(width: 80, alignment: .leading)
                             TextField("", text: $apiEndpoint)
                                 .textFieldStyle(.roundedBorder)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
                         
                         Divider()
@@ -36,6 +38,8 @@ struct SettingsView: View {
                                 if showAPIKey {
                                     TextField("", text: $apiKey)
                                         .textFieldStyle(.roundedBorder)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
                                 } else {
                                     // 使用 SecureField，如果有已保存的 key，使用占位符显示星号
                                     SecureField("", text: Binding(
@@ -54,6 +58,8 @@ struct SettingsView: View {
                                         }
                                     ))
                                     .textFieldStyle(.roundedBorder)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
                                 }
                                 Button(showAPIKey ? "隐藏" : "显示") {
                                     if !showAPIKey {
@@ -86,6 +92,8 @@ struct SettingsView: View {
                                 .frame(width: 80, alignment: .leading)
                             TextField("", text: $modelName)
                                 .textFieldStyle(.roundedBorder)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
                     }
                     .padding(.vertical, 4)
