@@ -189,13 +189,13 @@ struct MainWindowView: View {
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 8)
                                 .padding(.top, 8)
+                                .offset(x: 4, y: 6)
                                 .background(
                                     GeometryReader { geometry in
                                         Color.clear
                                             .onAppear {
                                                 let frame = geometry.frame(in: .local)
                                                 print("Placeholder text frame: x=\(frame.minX), y=\(frame.minY), width=\(frame.width), height=\(frame.height)")
-                                                print("Placeholder text baseline: \(geometry[.firstTextBaseline])")
                                             }
                                     }
                                 )
