@@ -9,34 +9,35 @@ struct SettingsView: View {
     @State private var modelName: String = Config.defaultModelName
     @State private var hasSavedKey: Bool = false
     
-    private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
-    
     var body: some View {
         VStack(spacing: 0) {
             Form {
                 Section(header: Text("API 配置")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // API 端点
-                        VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("API 端点")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
-                                .textFieldStyle(.roundedBorder)
-                            Text("支持 OpenAI compatible API")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 4) {
+                                TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
+                                    .textFieldStyle(.roundedBorder)
+                                Text("支持 OpenAI compatible API")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Divider()
                         
                         // API Key
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            HStack(spacing: 8) {
                                 Text("API Key")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
-                                Spacer()
+                                    .frame(width: 80, alignment: .leading)
                                 if settingsManager.hasAPIKey() {
                                     HStack(spacing: 4) {
                                         Image(systemName: "checkmark.circle.fill")
@@ -48,7 +49,6 @@ struct SettingsView: View {
                                     }
                                 }
                             }
-                            
                             HStack(spacing: 8) {
                                 if showAPIKey {
                                     TextField("API Key", text: $apiKey)
@@ -92,38 +92,22 @@ struct SettingsView: View {
                                 .controlSize(.small)
                             }
                         }
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section(header: Text("翻译设置")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        // 目标语言
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("目标语言")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Picker("", selection: $settingsManager.targetLanguage) {
-                                ForEach(languages, id: \.self) { language in
-                                    Text(language).tag(language)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
                         
                         Divider()
                         
                         // 模型名称
-                        VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("模型名称")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            TextField("gpt-3.5-turbo", text: $modelName)
-                                .textFieldStyle(.roundedBorder)
-                            Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 4) {
+                                TextField("gpt-3.5-turbo", text: $modelName)
+                                    .textFieldStyle(.roundedBorder)
+                                Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     .padding(.vertical, 4)
@@ -132,10 +116,11 @@ struct SettingsView: View {
                 Section(header: Text("外观")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 主题模式
-                        VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("主题模式")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
                             Picker("", selection: $settingsManager.appearanceMode) {
                                 ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
                                     Text(mode.displayName).tag(mode)
@@ -151,27 +136,31 @@ struct SettingsView: View {
                 Section(header: Text("其他")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // 快捷键
-                        VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("快捷键")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            ShortcutRecorderView(
-                                keyCode: $settingsManager.shortcutKeyCode,
-                                modifiers: $settingsManager.shortcutModifiers
-                            )
-                            .frame(height: 24)
-                            Text("点击上方框设置快捷键，按 Esc 取消")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 4) {
+                                ShortcutRecorderView(
+                                    keyCode: $settingsManager.shortcutKeyCode,
+                                    modifiers: $settingsManager.shortcutModifiers
+                                )
+                                .frame(height: 24)
+                                Text("点击上方框设置快捷键，按 Esc 取消")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Divider()
                         
                         // 权限
-                        VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("权限")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
                             Button("检查辅助功能权限") {
                                 checkAccessibilityPermission()
                             }
