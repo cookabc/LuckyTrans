@@ -20,13 +20,8 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 4) {
-                                TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
-                                    .textFieldStyle(.roundedBorder)
-                                Text("支持 OpenAI compatible API")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            TextField("https://api.openai.com/v1/chat/completions", text: $apiEndpoint)
+                                .textFieldStyle(.roundedBorder)
                         }
                         
                         Divider()
@@ -39,14 +34,9 @@ struct SettingsView: View {
                                     .foregroundColor(.secondary)
                                     .frame(width: 80, alignment: .leading)
                                 if settingsManager.hasAPIKey() {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
-                                            .font(.caption)
-                                        Text("已保存")
-                                            .font(.caption)
-                                            .foregroundColor(.green)
-                                    }
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
                                 }
                             }
                             HStack(spacing: 8) {
@@ -101,13 +91,8 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 4) {
-                                TextField("gpt-3.5-turbo", text: $modelName)
-                                    .textFieldStyle(.roundedBorder)
-                                Text("例如: gpt-3.5-turbo, gpt-4, glm-4.6")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            TextField("gpt-3.5-turbo", text: $modelName)
+                                .textFieldStyle(.roundedBorder)
                         }
                     }
                     .padding(.vertical, 4)
@@ -141,16 +126,11 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 4) {
-                                ShortcutRecorderView(
-                                    keyCode: $settingsManager.shortcutKeyCode,
-                                    modifiers: $settingsManager.shortcutModifiers
-                                )
-                                .frame(height: 24)
-                                Text("点击上方框设置快捷键，按 Esc 取消")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            ShortcutRecorderView(
+                                keyCode: $settingsManager.shortcutKeyCode,
+                                modifiers: $settingsManager.shortcutModifiers
+                            )
+                            .frame(height: 24)
                         }
                         
                         Divider()
