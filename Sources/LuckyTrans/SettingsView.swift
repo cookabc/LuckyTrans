@@ -20,10 +20,8 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            TextField("", text: $apiEndpoint)
-                                .textFieldStyle(.roundedBorder)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                            ScrollableTextField(text: $apiEndpoint, placeholder: "")
+                                .frame(width: 350)
                         }
                         
                         Divider()
@@ -35,17 +33,11 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
                             HStack(spacing: 8) {
-                                if showAPIKey {
-                                    TextField("", text: $apiKey)
-                                        .textFieldStyle(.roundedBorder)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                } else {
-                                    // 使用 SecureField，如果有已保存的 key，使用占位符显示星号
-                                    SecureField("", text: Binding(
+                                ScrollableTextField(
+                                    text: Binding(
                                         get: {
-                                            // 如果已保存且当前为空，返回占位符（SecureField 会显示为星号）
-                                            if hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
+                                            // 如果已保存且当前为空，返回占位符
+                                            if !showAPIKey && hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
                                                 return "••••••••••••"
                                             }
                                             return apiKey
@@ -56,11 +48,11 @@ struct SettingsView: View {
                                                 apiKey = newValue
                                             }
                                         }
-                                    ))
-                                    .textFieldStyle(.roundedBorder)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                }
+                                    ),
+                                    placeholder: "",
+                                    isSecure: !showAPIKey
+                                )
+                                .frame(width: 350)
                                 Button(showAPIKey ? "隐藏" : "显示") {
                                     if !showAPIKey {
                                         // 点击"显示"时，加载真实的 key
@@ -90,10 +82,8 @@ struct SettingsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(width: 80, alignment: .leading)
-                            TextField("", text: $modelName)
-                                .textFieldStyle(.roundedBorder)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                            ScrollableTextField(text: $modelName, placeholder: "")
+                                .frame(width: 350)
                         }
                     }
                     .padding(.vertical, 4)
