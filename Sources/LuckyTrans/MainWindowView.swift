@@ -180,15 +180,15 @@ struct MainWindowView: View {
                         TextEditor(text: $selectedText)
                             .font(.body)
                             .scrollContentBackground(.hidden)
-                            .padding(4)
+                            .padding(8)
                             .frame(minHeight: 150)
                         
                         if selectedText.isEmpty {
                             Text("输入要翻译的文本，或点击「获取选中文本」按钮")
                                 .font(.body)
                                 .foregroundColor(.secondary)
-                                .padding(.leading, 4)
-                                .padding(.top, 4)
+                                .padding(.leading, 8)
+                                .padding(.top, 8)
                                 .allowsHitTesting(false)
                         }
                     }
@@ -283,7 +283,7 @@ struct MainWindowView: View {
                                     .font(.body)
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(12)
+                                    .padding(8)
                             } else if let error = errorMessage, !error.isEmpty {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -293,7 +293,7 @@ struct MainWindowView: View {
                                         .foregroundColor(.red)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
+                                .padding(8)
                             } else {
                                 HStack {
                                     Spacer()
