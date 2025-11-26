@@ -51,7 +51,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
         }
         
         @objc func handleClick() {
-            guard let parent = parent else { return }
+            guard parent != nil else { return }
             isRecording = true
             textField?.stringValue = "按下快捷键..."
             textField?.backgroundColor = .selectedControlColor
