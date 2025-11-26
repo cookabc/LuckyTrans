@@ -189,10 +189,28 @@ struct MainWindowView: View {
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 8)
                                 .padding(.top, 8)
-                                .offset(x: 5, y: 5)
+                                .background(
+                                    GeometryReader { geometry in
+                                        Color.clear
+                                            .onAppear {
+                                                let frame = geometry.frame(in: .local)
+                                                print("Placeholder text frame: x=\(frame.minX), y=\(frame.minY), width=\(frame.width), height=\(frame.height)")
+                                                print("Placeholder text baseline: \(geometry[.firstTextBaseline])")
+                                            }
+                                    }
+                                )
                                 .allowsHitTesting(false)
                         }
                     }
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear
+                                .onAppear {
+                                    let frame = geometry.frame(in: .local)
+                                    print("ZStack frame: x=\(frame.minX), y=\(frame.minY), width=\(frame.width), height=\(frame.height)")
+                                }
+                        }
+                    )
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
