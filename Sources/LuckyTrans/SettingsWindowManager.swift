@@ -61,11 +61,12 @@ class SettingsWindowManager: ObservableObject {
             .environmentObject(SettingsManager.shared)
         
         let hostingController = NSHostingController(rootView: settingsView)
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 600)
         
         // 使用自定义窗口类，禁用关闭动画
-        // 初始高度设置得足够大，确保内容可以完全渲染
+        // 初始高度设置为 600
         let window = NonAnimatedSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 800),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -76,9 +77,6 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
-        
-        // 设置视图大小（初始设置为最大高度，让内容可以完全渲染）
-        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 800)
         
         // 应用当前的主题设置
         let appearanceMode = SettingsManager.shared.appearanceMode
@@ -107,36 +105,6 @@ class SettingsWindowManager: ObservableObject {
         
         self.settingsWindow = window
         
-        // 监听内容高度变化通知，调整窗口大小
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("SettingsContentHeightChanged"),
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self = self,
-                  let window = self.settingsWindow,
-                  let height = notification.userInfo?["height"] as? CGFloat else {
-                return
-            }
-            
-            // 计算最终窗口高度：内容高度，但不超过最大高度
-            let maxHeight: CGFloat = 800
-            let finalHeight = min(height, maxHeight)
-            
-            // 确保高度至少为一个合理的最小值
-            let minHeight: CGFloat = 300
-            let adjustedHeight = max(finalHeight, minHeight)
-            
-            // 调整窗口大小，保持窗口顶部位置不变
-            var frame = window.frame
-            let oldHeight = frame.size.height
-            if abs(oldHeight - adjustedHeight) > 1 { // 避免微小的调整
-                frame.size.height = adjustedHeight
-                frame.origin.y += (oldHeight - adjustedHeight)
-                window.setFrame(frame, display: true, animate: false)
-            }
-        }
-        
         // 窗口关闭时清理，但不退出应用
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
@@ -150,49 +118,12 @@ class SettingsWindowManager: ObservableObject {
             if let self = self {
                 self.settingsWindow = nil
                 self.windowDelegate = nil
-                // 移除内容高度变化监听
-                NotificationCenter.default.removeObserver(
-                    self,
-                    name: NSNotification.Name("SettingsContentHeightChanged"),
-                    object: nil
-                )
             }
         }
         
         // 拦截窗口关闭，禁用动画
         windowDelegate = WindowCloseDelegate()
         window.delegate = windowDelegate
-        
-        // 延迟触发一次高度检查，确保视图已完全渲染和布局
-        // 使用多个延迟来确保在不同阶段都能正确测量
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            window.contentView?.needsLayout = true
-            window.contentView?.layoutSubtreeIfNeeded()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if let contentView = window.contentView {
-                    // 设置一个非常大的高度，让内容可以完全展开
-                    contentView.frame = NSRect(x: 0, y: 0, width: 550, height: 10000)
-                    contentView.layoutSubtreeIfNeeded()
-                    
-                    // 获取内容的理想大小（不包括标题栏）
-                    let fittingSize = contentView.fittingSize
-                    
-                    // 如果 fittingSize 可用，使用它来调整窗口大小
-                    if fittingSize.height > 0 {
-                        let maxHeight: CGFloat = 800
-                        let finalHeight = min(fittingSize.height, maxHeight)
-                        
-                        // 调整窗口大小
-                        var frame = window.frame
-                        let oldHeight = frame.size.height
-                        frame.size.height = finalHeight
-                        frame.origin.y += (oldHeight - finalHeight)
-                        window.setFrame(frame, display: true, animate: false)
-                    }
-                }
-            }
-        }
     }
 }
 
