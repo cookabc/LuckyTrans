@@ -159,7 +159,8 @@ struct SettingsView: View {
                 .background(Color(NSColor.controlBackgroundColor))
             }
         }
-        .frame(width: 550, height: 650)
+        .frame(width: 550)
+        .frame(maxHeight: 800)
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
