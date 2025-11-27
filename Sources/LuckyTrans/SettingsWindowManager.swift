@@ -105,6 +105,36 @@ class SettingsWindowManager: ObservableObject {
         
         self.settingsWindow = window
         
+        // 监听内容高度变化通知，调整窗口大小
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("SettingsContentHeightChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self,
+                  let window = self.settingsWindow,
+                  let height = notification.userInfo?["height"] as? CGFloat else {
+                return
+            }
+            
+            // 计算最终窗口高度：内容高度，但不超过最大高度
+            let maxHeight: CGFloat = 800
+            let finalHeight = min(height, maxHeight)
+            
+            // 确保高度至少为一个合理的最小值
+            let minHeight: CGFloat = 300
+            let adjustedHeight = max(finalHeight, minHeight)
+            
+            // 调整窗口大小，保持窗口顶部位置不变
+            var frame = window.frame
+            let oldHeight = frame.size.height
+            if abs(oldHeight - adjustedHeight) > 1 { // 避免微小的调整
+                frame.size.height = adjustedHeight
+                frame.origin.y += (oldHeight - adjustedHeight)
+                window.setFrame(frame, display: true, animate: false)
+            }
+        }
+        
         // 窗口关闭时清理，但不退出应用
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
@@ -118,12 +148,30 @@ class SettingsWindowManager: ObservableObject {
             if let self = self {
                 self.settingsWindow = nil
                 self.windowDelegate = nil
+                // 移除内容高度变化监听
+                NotificationCenter.default.removeObserver(
+                    self,
+                    name: NSNotification.Name("SettingsContentHeightChanged"),
+                    object: nil
+                )
             }
         }
         
         // 拦截窗口关闭，禁用动画
         windowDelegate = WindowCloseDelegate()
         window.delegate = windowDelegate
+        
+        // 延迟触发一次高度检查，确保视图已完全渲染
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let contentView = window.contentView {
+                let fittingSize = contentView.fittingSize
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SettingsContentHeightChanged"),
+                    object: nil,
+                    userInfo: ["height": fittingSize.height]
+                )
+            }
+        }
     }
 }
 

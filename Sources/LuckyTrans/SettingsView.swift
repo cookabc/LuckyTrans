@@ -1,6 +1,14 @@
 import SwiftUI
 import ApplicationServices
 
+// 用于传递内容高度的 PreferenceKey
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var apiKey: String = ""
@@ -143,7 +151,6 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.inset)
-            .frame(maxHeight: 800)
             
             // 底部保存按钮
             VStack(spacing: 0) {
@@ -161,6 +168,22 @@ struct SettingsView: View {
             }
         }
         .frame(width: 550)
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: ContentHeightPreferenceKey.self,
+                    value: geometry.size.height
+                )
+            }
+        )
+        .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+            // 当内容高度改变时，通知窗口管理器调整窗口大小
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SettingsContentHeightChanged"),
+                object: nil,
+                userInfo: ["height": height]
+            )
+        }
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
