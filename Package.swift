@@ -22,10 +22,6 @@ let package = Package(
             name: "LuckyTrans",
             dependencies: []
         ),
-        .testTarget(
-            name: "LuckyTransTests",
-            dependencies: ["LuckyTrans"]
-        ),
     ]
 )
 
