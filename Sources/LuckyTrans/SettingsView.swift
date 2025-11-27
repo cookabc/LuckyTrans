@@ -143,7 +143,6 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.inset)
-            .scrollDisabled(true)
             
             // 底部保存按钮
             VStack(spacing: 0) {
@@ -161,7 +160,6 @@ struct SettingsView: View {
             }
         }
         .frame(width: 550)
-        .frame(maxHeight: 800)
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
