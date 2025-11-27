@@ -11,7 +11,7 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Form {
+            List {
                 Section(header: Text("API 配置")) {
                     VStack(alignment: .leading, spacing: 12) {
                         // API 端点
@@ -142,7 +142,8 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .formStyle(.grouped)
+            .listStyle(.insetGrouped)
+            .scrollDisabled(true)
             
             // 底部保存按钮
             VStack(spacing: 0) {
