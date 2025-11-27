@@ -61,12 +61,11 @@ class SettingsWindowManager: ObservableObject {
             .environmentObject(SettingsManager.shared)
         
         let hostingController = NSHostingController(rootView: settingsView)
-        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 600)
         
         // 使用自定义窗口类，禁用关闭动画
-        // 设置一个合理的初始高度
+        // 初始高度设置得足够大，确保内容可以完全渲染
         let window = NonAnimatedSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 800),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -77,6 +76,9 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
+        
+        // 设置视图大小（初始设置为最大高度，让内容可以完全渲染）
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 800)
         
         // 应用当前的主题设置
         let appearanceMode = SettingsManager.shared.appearanceMode
@@ -161,15 +163,34 @@ class SettingsWindowManager: ObservableObject {
         windowDelegate = WindowCloseDelegate()
         window.delegate = windowDelegate
         
-        // 延迟触发一次高度检查，确保视图已完全渲染
+        // 延迟触发一次高度检查，确保视图已完全渲染和布局
+        // 使用多个延迟来确保在不同阶段都能正确测量
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let contentView = window.contentView {
-                let fittingSize = contentView.fittingSize
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("SettingsContentHeightChanged"),
-                    object: nil,
-                    userInfo: ["height": fittingSize.height]
-                )
+            window.contentView?.needsLayout = true
+            window.contentView?.layoutSubtreeIfNeeded()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if let contentView = window.contentView {
+                    // 设置一个非常大的高度，让内容可以完全展开
+                    contentView.frame = NSRect(x: 0, y: 0, width: 550, height: 10000)
+                    contentView.layoutSubtreeIfNeeded()
+                    
+                    // 获取内容的理想大小（不包括标题栏）
+                    let fittingSize = contentView.fittingSize
+                    
+                    // 如果 fittingSize 可用，使用它来调整窗口大小
+                    if fittingSize.height > 0 {
+                        let maxHeight: CGFloat = 800
+                        let finalHeight = min(fittingSize.height, maxHeight)
+                        
+                        // 调整窗口大小
+                        var frame = window.frame
+                        let oldHeight = frame.size.height
+                        frame.size.height = finalHeight
+                        frame.origin.y += (oldHeight - finalHeight)
+                        window.setFrame(frame, display: true, animate: false)
+                    }
+                }
             }
         }
     }
