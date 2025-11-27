@@ -142,7 +142,7 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.inset)
             .scrollDisabled(true)
             
             // 底部保存按钮
