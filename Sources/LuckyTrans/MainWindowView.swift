@@ -270,14 +270,9 @@ struct MainWindowView: View {
                             if isTranslating {
                                 HStack {
                                     Spacer()
-                                    VStack(spacing: 12) {
-                                        ProgressView()
-                                            .scaleEffect(0.9)
-                                        Text("翻译中...")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.vertical, 50)
+                                    ProgressView()
+                                        .scaleEffect(0.9)
+                                        .padding(.vertical, 50)
                                     Spacer()
                                 }
                             } else if !translation.isEmpty {
