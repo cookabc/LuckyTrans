@@ -331,6 +331,15 @@ struct MainWindowView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("UpdateSelectedText"))) { notification in
+            // 监听快捷键触发的文本更新通知
+            if let text = notification.userInfo?["text"] as? String {
+                selectedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                errorMessage = nil
+            } else if let error = notification.userInfo?["error"] as? String {
+                errorMessage = error
+            }
+        }
         .onDisappear {
             // 窗口关闭时，取消所有异步任务
             translationTask?.cancel()

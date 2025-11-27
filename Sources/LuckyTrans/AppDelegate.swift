@@ -88,62 +88,59 @@ extension AppDelegate: ShortcutManagerDelegate {
     }
     
     private func handleTranslationRequest() {
-        // 检查 API Key 是否配置
-        guard SettingsManager.shared.hasAPIKey() else {
-            showError("请先在设置中配置 API Key")
-            // 打开设置窗口
-            SettingsWindowManager.shared.showSettings()
-            return
-        }
+        // 重要：先获取文本，再显示窗口，避免焦点切换导致无法获取其他应用的文本
         
         // 检查权限状态
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
         
-        // 如果没有权限，提示用户
+        // 如果没有权限，先显示窗口再显示错误
         if !hasPermission {
-            showError("无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans")
+            MainWindowManager.shared.showMainWindow()
+            NotificationCenter.default.post(
+                name: NSNotification.Name("UpdateSelectedText"),
+                object: nil,
+                userInfo: ["error": "无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans"]
+            )
             // 打开系统设置
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
             }
             return
         }
         
-        // 获取选中的文本
-        guard let selectedText = TextCaptureManager.shared.getSelectedText() else {
-            showError("无法获取选中的文本。\n\n可能的原因：\n1. 当前应用不支持文本选择\n2. 请先选中文本再按快捷键\n3. 尝试在文本编辑器或浏览器中使用")
-            return
-        }
+        // 先获取选中的文本（在激活窗口之前）
+        let capturedText = TextCaptureManager.shared.getSelectedText()
         
-        let trimmedText = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else {
-            return
-        }
+        // 现在才显示主窗口
+        MainWindowManager.shared.showMainWindow()
         
-        // 显示加载状态
-        showTranslationWindow(with: .loading(trimmedText))
-        
-        // 执行翻译
-        Task {
-            do {
-                let translation = try await TranslationService.shared.translate(
-                    text: trimmedText,
-                    targetLanguage: SettingsManager.shared.targetLanguage
+        // 处理获取到的文本
+        if let selectedText = capturedText {
+            let trimmedText = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedText.isEmpty {
+                // 更新主窗口的文本
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("UpdateSelectedText"),
+                    object: nil,
+                    userInfo: ["text": trimmedText]
                 )
-                
-                await MainActor.run {
-                    showTranslationWindow(with: .success(original: trimmedText, translation: translation))
-                }
-            } catch let translationError as TranslationError {
-                await MainActor.run {
-                    showTranslationWindow(with: .error(translationError.localizedDescription))
-                }
-            } catch {
-                await MainActor.run {
-                    showTranslationWindow(with: .error("翻译失败: \(error.localizedDescription)"))
-                }
+            } else {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("UpdateSelectedText"),
+                    object: nil,
+                    userInfo: ["error": "无法获取选中的文本。请先选中文本，或尝试在文本编辑器中使用。"]
+                )
             }
+        } else {
+            // 获取失败，在主窗口显示错误
+            NotificationCenter.default.post(
+                name: NSNotification.Name("UpdateSelectedText"),
+                object: nil,
+                userInfo: ["error": "无法获取选中的文本。请先选中文本，或尝试在文本编辑器中使用。"]
+            )
         }
     }
     
