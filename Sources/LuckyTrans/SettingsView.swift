@@ -143,6 +143,7 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.inset)
+            .frame(maxHeight: 800)
             
             // 底部保存按钮
             VStack(spacing: 0) {

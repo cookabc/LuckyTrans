@@ -61,11 +61,12 @@ class SettingsWindowManager: ObservableObject {
             .environmentObject(SettingsManager.shared)
         
         let hostingController = NSHostingController(rootView: settingsView)
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 600)
         
         // 使用自定义窗口类，禁用关闭动画
-        // 初始高度设置为最大高度，让内容决定实际高度
+        // 设置一个合理的初始高度
         let window = NonAnimatedSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 800),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -76,27 +77,6 @@ class SettingsWindowManager: ObservableObject {
         
         window.title = "设置"
         window.contentViewController = hostingController
-        
-        // 让窗口根据内容自适应大小
-        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 800)
-        
-        // 在视图加载后，根据内容调整窗口大小
-        DispatchQueue.main.async {
-            if let contentView = window.contentView {
-                // 获取内容的理想大小
-                let fittingSize = contentView.fittingSize
-                let maxHeight: CGFloat = 800
-                let finalHeight = min(fittingSize.height, maxHeight)
-                
-                // 调整窗口大小到内容高度（但不超过最大高度）
-                var frame = window.frame
-                let oldHeight = frame.size.height
-                frame.size.height = finalHeight
-                // 保持窗口顶部位置不变
-                frame.origin.y += (oldHeight - finalHeight)
-                window.setFrame(frame, display: true, animate: false)
-            }
-        }
         
         // 应用当前的主题设置
         let appearanceMode = SettingsManager.shared.appearanceMode
