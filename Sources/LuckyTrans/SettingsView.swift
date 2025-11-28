@@ -36,8 +36,8 @@ struct SettingsView: View {
                                 ScrollableTextField(
                                     text: Binding(
                                         get: {
-                                            // 如果已保存且当前为空，返回占位符
-                                            if !showAPIKey && hasSavedKey && (apiKey.isEmpty || apiKey == "••••••••••••") {
+                                            // 如果隐藏且已保存，返回占位符
+                                            if !showAPIKey && hasSavedKey {
                                                 return "••••••••••••"
                                             }
                                             return apiKey
@@ -52,6 +52,7 @@ struct SettingsView: View {
                                     placeholder: "",
                                     isSecure: !showAPIKey
                                 )
+                                .id("apiKey_\(showAPIKey)") // 通过 id 强制重新创建视图以切换安全模式
                                 .frame(width: 350)
                                 Button(showAPIKey ? "隐藏" : "显示") {
                                     if !showAPIKey {

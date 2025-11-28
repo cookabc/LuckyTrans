@@ -39,12 +39,8 @@ struct ScrollableTextField: NSViewRepresentable {
             nsView.stringValue = text
         }
         
-        // 更新安全模式
-        if context.coordinator.isSecure != isSecure {
-            // 如果安全模式改变，需要重新创建视图
-            // 这里我们只更新状态，实际切换会在下次视图更新时处理
-            context.coordinator.isSecure = isSecure
-        }
+        // 更新安全模式状态
+        context.coordinator.isSecure = isSecure
     }
     
     func makeCoordinator() -> Coordinator {
