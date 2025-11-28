@@ -61,19 +61,19 @@ class SettingsWindowManager: ObservableObject {
             .environmentObject(SettingsManager.shared)
         
         let hostingController = NSHostingController(rootView: settingsView)
-        hostingController.view.frame = NSRect(x: 0, y: 0, width: 550, height: 600)
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: 750, height: 600)
         
         // 使用自定义窗口类，禁用关闭动画
-        // 初始高度设置为 600
+        // 初始高度设置为 600，宽度调整为 750 以适应侧边栏
         let window = NonAnimatedSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 750, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         
         // 只设置最大高度，不设置最小高度（让窗口可以根据内容自适应）
-        window.maxSize = NSSize(width: 550, height: 800)
+        window.maxSize = NSSize(width: 750, height: 800)
         
         window.title = "设置"
         window.contentViewController = hostingController

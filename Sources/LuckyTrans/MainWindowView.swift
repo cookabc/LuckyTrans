@@ -111,30 +111,41 @@ struct MainWindowView: View {
     
     @Environment(\.colorScheme) var colorScheme
     
+    // 获取翻译方向显示文本
+    private var translationDirection: String {
+        let source = "Auto"
+        let target = settingsManager.targetLanguage
+        return "\(source) → \(target)"
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            HStack {
-                Text("LuckyTrans")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button(action: openSettingsWindow) {
-                    Image(systemName: "gearshape")
-                        .foregroundColor(.secondary)
-                        .font(.body)
-                }
-                .buttonStyle(.plain)
-                .help("设置")
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(NSColor.controlBackgroundColor))
+        ZStack {
+            // 毛玻璃背景
+            Color.clear
+                .background(.regularMaterial)
             
-            Divider()
-            
-            // 主要内容区域
             VStack(spacing: 0) {
+                // 标题栏
+                HStack {
+                    Text(translationDirection)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Button(action: openSettingsWindow) {
+                        Image(systemName: "gearshape")
+                            .foregroundColor(.secondary)
+                            .font(.body)
+                    }
+                    .buttonStyle(.plain)
+                    .help("设置")
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                
+                Divider()
+                
+                // 主要内容区域
+                VStack(spacing: 0) {
                 // 工具栏
                 HStack(spacing: 12) {
                     // 目标语言选择
@@ -195,11 +206,12 @@ struct MainWindowView: View {
                         }
                     }
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(8)
+                    .cornerRadius(12)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(NSColor.separatorColor).opacity(0.5), lineWidth: 1)
                     )
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                     
                     if let error = errorMessage, !error.isEmpty {
                         HStack(spacing: 6) {
@@ -250,69 +262,87 @@ struct MainWindowView: View {
                             .foregroundColor(.secondary)
                         Spacer()
                         if !translation.isEmpty {
-                            Button(action: {
-                                let pasteboard = NSPasteboard.general
-                                pasteboard.clearContents()
-                                pasteboard.setString(translation, forType: .string)
-                            }) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                            HStack(spacing: 8) {
+                                // 复制按钮
+                                Button(action: {
+                                    let pasteboard = NSPasteboard.general
+                                    pasteboard.clearContents()
+                                    pasteboard.setString(translation, forType: .string)
+                                }) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("复制翻译结果")
+                                
+                                // 扬声器按钮（TTS功能，暂时只显示按钮）
+                                Button(action: {
+                                    // TODO: 实现文本转语音功能
+                                }) {
+                                    Image(systemName: "speaker.wave.2")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("朗读翻译结果")
                             }
-                            .buttonStyle(.plain)
-                            .help("复制翻译结果")
                         }
                     }
                     .padding(.horizontal, 4)
                     
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            if isTranslating {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                        .scaleEffect(0.9)
-                                        .padding(.vertical, 50)
-                                    Spacer()
-                                }
-                            } else if !translation.isEmpty {
-                                Text(translation)
-                                    .font(.body)
-                                    .textSelection(.enabled)
+                    ZStack(alignment: .bottomTrailing) {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+                                if isTranslating {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .scaleEffect(0.9)
+                                            .padding(.vertical, 50)
+                                        Spacer()
+                                    }
+                                } else if !translation.isEmpty {
+                                    Text(translation)
+                                        .font(.body)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(12)
+                                } else if let error = errorMessage, !error.isEmpty {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.red)
+                                        Text(error)
+                                            .font(.body)
+                                            .foregroundColor(.red)
+                                    }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(12)
-                            } else if let error = errorMessage, !error.isEmpty {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.red)
-                                    Text(error)
-                                        .font(.body)
-                                        .foregroundColor(.red)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                            } else {
-                                HStack {
-                                    Spacer()
-                                    Text("翻译结果将显示在这里")
-                                        .font(.body)
-                                        .foregroundColor(.secondary)
-                                        .padding(.vertical, 50)
-                                    Spacer()
+                                } else {
+                                    HStack {
+                                        Spacer()
+                                        Text("翻译结果将显示在这里")
+                                            .font(.body)
+                                            .foregroundColor(.secondary)
+                                            .padding(.vertical, 50)
+                                        Spacer()
+                                    }
                                 }
                             }
                         }
+                        .frame(minHeight: 150)
                     }
-                    .frame(minHeight: 150)
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(8)
+                    .cornerRadius(12)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(NSColor.separatorColor).opacity(0.5), lineWidth: 1)
                     )
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
+                }
             }
         }
         .frame(minWidth: 650, minHeight: 600)
