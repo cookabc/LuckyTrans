@@ -8,6 +8,15 @@ struct SettingsView: View {
     @State private var apiEndpoint: String = Config.defaultAPIEndpoint
     @State private var modelName: String = Config.defaultModelName
     @State private var hasSavedKey: Bool = false
+    @State private var savedKeyLength: Int = 0
+    
+    // 生成与实际 key 长度相同的占位符
+    private var placeholder: String {
+        if savedKeyLength > 0 {
+            return String(repeating: "•", count: savedKeyLength)
+        }
+        return "••••••••••••" // 默认占位符
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -38,13 +47,13 @@ struct SettingsView: View {
                                         get: {
                                             // 如果隐藏且已保存，返回占位符
                                             if !showAPIKey && hasSavedKey {
-                                                return "••••••••••••"
+                                                return placeholder
                                             }
                                             return apiKey
                                         },
                                         set: { newValue in
                                             // 如果输入的是占位符，忽略
-                                            if newValue != "••••••••••••" {
+                                            if newValue != placeholder {
                                                 apiKey = newValue
                                             }
                                         }
@@ -57,7 +66,7 @@ struct SettingsView: View {
                                 Button(showAPIKey ? "隐藏" : "显示") {
                                     if !showAPIKey {
                                         // 点击"显示"时，加载真实的 key
-                                        if apiKey.isEmpty || apiKey == "••••••••••••" {
+                                        if apiKey.isEmpty || apiKey == placeholder {
                                             if let savedKey = settingsManager.getAPIKey() {
                                                 apiKey = savedKey
                                             }
@@ -65,7 +74,7 @@ struct SettingsView: View {
                                     } else {
                                         // 点击"隐藏"时，如果已保存，恢复占位符
                                         if hasSavedKey {
-                                            apiKey = "••••••••••••"
+                                            apiKey = placeholder
                                         }
                                     }
                                     showAPIKey.toggle()
@@ -165,9 +174,10 @@ struct SettingsView: View {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
             hasSavedKey = settingsManager.hasAPIKey()
-            // 如果有已保存的 key，设置占位符，SecureField 会显示为星号
-            if hasSavedKey {
-                apiKey = "••••••••••••"
+            // 如果有已保存的 key，获取其长度并设置占位符
+            if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
+                savedKeyLength = savedKey.count
+                apiKey = placeholder
             }
         }
     }
@@ -178,12 +188,13 @@ struct SettingsView: View {
         settingsManager.modelName = modelName
         
         // 保存 API Key（如果输入框有内容且不是占位符）
-        if !apiKey.isEmpty && apiKey != "••••••••••••" {
+        if !apiKey.isEmpty && apiKey != placeholder {
             if settingsManager.saveAPIKey(apiKey) {
                 hasSavedKey = true
+                savedKeyLength = apiKey.count
                 // 保存后，如果不显示，恢复占位符
                 if !showAPIKey {
-                    apiKey = "••••••••••••"
+                    apiKey = placeholder
                 }
             }
         }
