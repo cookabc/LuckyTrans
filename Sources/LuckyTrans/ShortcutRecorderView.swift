@@ -7,8 +7,23 @@ class ClickableTextField: NSTextField {
     weak var coordinator: ShortcutRecorderView.Coordinator?
     
     override func mouseDown(with event: NSEvent) {
-        super.mouseDown(with: event)
-        coordinator?.handleClick()
+        print("ClickableTextField mouseDown called")
+        // 不调用 super，直接处理点击
+        if let coordinator = coordinator {
+            print("ClickableTextField: coordinator exists")
+            coordinator.handleClick()
+        } else {
+            print("ClickableTextField: coordinator is nil")
+        }
+    }
+    
+    override func mouseUp(with event: NSEvent) {
+        print("ClickableTextField mouseUp called")
+        // 也尝试在 mouseUp 中处理
+    }
+    
+    override var acceptsFirstResponder: Bool {
+        return true
     }
 }
 
@@ -16,7 +31,10 @@ struct ShortcutRecorderView: NSViewRepresentable {
     @Binding var keyCode: UInt32
     @Binding var modifiers: UInt32
     
-    func makeNSView(context: Context) -> NSTextField {
+    func makeNSView(context: Context) -> NSView {
+        // 创建一个容器视图
+        let containerView = NSView()
+        
         let textField = ClickableTextField()
         textField.isEditable = false
         textField.isSelectable = false
@@ -27,16 +45,46 @@ struct ShortcutRecorderView: NSViewRepresentable {
         textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
         textField.coordinator = context.coordinator
         
+        // 添加一个透明的覆盖按钮来捕获点击
+        let button = NSButton()
+        button.isBordered = false
+        button.title = ""
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.buttonClicked)
+        button.bezelStyle = .rounded
+        button.alphaValue = 0.01 // 几乎透明但仍然可以点击
+        
+        containerView.addSubview(textField)
+        containerView.addSubview(button)
+        
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            textField.topAnchor.constraint(equalTo: containerView.topAnchor),
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            textField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            button.topAnchor.constraint(equalTo: containerView.topAnchor),
+            button.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            button.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            button.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+        ])
+        
         context.coordinator.textField = textField
         context.coordinator.keyCodeBinding = _keyCode
         context.coordinator.modifiersBinding = _modifiers
-        return textField
+        return containerView
     }
     
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        // 只在非录制状态时更新显示
-        if !context.coordinator.isRecording {
-            nsView.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
+    func updateNSView(_ nsView: NSView, context: Context) {
+        // 找到文本字段并更新
+        if let textField = nsView.subviews.first(where: { $0 is ClickableTextField }) as? ClickableTextField {
+            // 只在非录制状态时更新显示
+            if !context.coordinator.isRecording {
+                textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
+            }
+            textField.coordinator = context.coordinator
         }
         context.coordinator.keyCodeBinding = _keyCode
         context.coordinator.modifiersBinding = _modifiers
@@ -57,9 +105,19 @@ struct ShortcutRecorderView: NSViewRepresentable {
             super.init()
         }
         
+        @objc func buttonClicked() {
+            print("buttonClicked called")
+            handleClick()
+        }
+        
         func handleClick() {
-            guard let textField = textField, !isRecording else { return }
+            print("handleClick called")
+            guard let textField = textField, !isRecording else {
+                print("handleClick: guard failed - textField: \(textField != nil), isRecording: \(isRecording)")
+                return
+            }
             
+            print("handleClick: starting recording")
             // 确保文本字段获得焦点
             textField.window?.makeFirstResponder(textField)
             
