@@ -120,17 +120,41 @@ struct MainWindowView: View {
     
     var body: some View {
         ZStack {
-            // 毛玻璃背景
+            // 增强的毛玻璃背景
             Color.clear
-                .background(.regularMaterial)
+                .background(.ultraThinMaterial)
             
-            VStack(spacing: 0) {
-                // 标题栏
+            VStack(spacing: 24) {
+                // 标题栏（带毛玻璃效果）
                 HStack {
-                    Text(translationDirection)
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    HStack(spacing: 12) {
+                        Text(translationDirection)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        // 语言选择器（简化版）
+                        Picker("", selection: $settingsManager.targetLanguage) {
+                            ForEach(languages, id: \.self) { language in
+                                Text(language).tag(language)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 100)
+                    }
+                    
                     Spacer()
+                    
+                    // 获取选中文本按钮（简化）
+                    Button(action: getSelectedTextFromSystem) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                            Text("AI 获取选中文本")
+                        }
+                        .font(.subheadline)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    
                     Button(action: openSettingsWindow) {
                         Image(systemName: "gearshape")
                             .foregroundColor(.secondary)
@@ -139,79 +163,37 @@ struct MainWindowView: View {
                     .buttonStyle(.plain)
                     .help("设置")
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
                 .padding(.vertical, 16)
-                
-                Divider()
-                
-                // 主要内容区域
-                VStack(spacing: 0) {
-                // 工具栏
-                HStack(spacing: 12) {
-                    // 目标语言选择
-                    HStack(spacing: 8) {
-                        Text("目标语言")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Picker("", selection: $settingsManager.targetLanguage) {
-                            ForEach(languages, id: \.self) { language in
-                                Text(language).tag(language)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 120)
-                    }
-                    
-                    Spacer()
-                    
-                    // 获取选中文本按钮
-                    Button(action: getSelectedTextFromSystem) {
-                        Label("获取选中文本", systemImage: "text.cursor")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                
-                Divider()
+                .background(.ultraThinMaterial)
                 
                 // 原文输入区域
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("原文")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
+                    Text("原文")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
                     
                     ZStack(alignment: .topLeading) {
                         TextEditor(text: $selectedText)
                             .font(.body)
                             .scrollContentBackground(.hidden)
-                            .padding(.leading, 8)
-                            .padding(.top, 10)
-                            .frame(minHeight: 150)
+                            .padding(12)
+                            .frame(minHeight: 180)
                         
                         if selectedText.isEmpty {
-                            Text("输入要翻译的文本，或点击「获取选中文本」按钮")
+                            Text("输入要翻译的文本,或点击「获取选中文本」按钮")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.leading, 12)
-                                .padding(.top, 10)
+                                .padding(.leading, 16)
+                                .padding(.top, 12)
                                 .allowsHitTesting(false)
                         }
                     }
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(NSColor.separatorColor).opacity(0.5), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                     
                     if let error = errorMessage, !error.isEmpty {
                         HStack(spacing: 6) {
@@ -225,71 +207,37 @@ struct MainWindowView: View {
                         .padding(.horizontal, 4)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 24)
                 
                 // 翻译按钮
-                HStack {
-                    Button(action: translateText) {
-                        HStack(spacing: 8) {
-                            if isTranslating {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .progressViewStyle(.circular)
-                            } else {
-                                Image(systemName: "arrow.right.circle.fill")
-                            }
-                            Text(isTranslating ? "翻译中..." : "翻译")
-                                .fontWeight(.medium)
+                Button(action: translateText) {
+                    HStack(spacing: 8) {
+                        if isTranslating {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "arrow.right")
+                                .fontWeight(.semibold)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        Text(isTranslating ? "翻译中..." : "翻译")
+                            .fontWeight(.semibold)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isTranslating || selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
-                Divider()
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(isTranslating || selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .padding(.horizontal, 24)
                 
                 // 翻译结果区域
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("翻译")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        if !translation.isEmpty {
-                            HStack(spacing: 8) {
-                                // 复制按钮
-                                Button(action: {
-                                    let pasteboard = NSPasteboard.general
-                                    pasteboard.clearContents()
-                                    pasteboard.setString(translation, forType: .string)
-                                }) {
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.body)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .help("复制翻译结果")
-                                
-                                // 扬声器按钮（TTS功能，暂时只显示按钮）
-                                Button(action: {
-                                    // TODO: 实现文本转语音功能
-                                }) {
-                                    Image(systemName: "speaker.wave.2")
-                                        .font(.body)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .help("朗读翻译结果")
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 4)
+                    Text("翻译")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
                     
                     ZStack(alignment: .bottomTrailing) {
                         ScrollView {
@@ -330,19 +278,44 @@ struct MainWindowView: View {
                                 }
                             }
                         }
-                        .frame(minHeight: 150)
+                        .frame(minHeight: 180)
+                        
+                        // 按钮在底部右侧
+                        if !translation.isEmpty {
+                            HStack(spacing: 12) {
+                                // 复制按钮
+                                Button(action: {
+                                    let pasteboard = NSPasteboard.general
+                                    pasteboard.clearContents()
+                                    pasteboard.setString(translation, forType: .string)
+                                }) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("复制翻译结果")
+                                
+                                // 扬声器按钮
+                                Button(action: {
+                                    // TODO: 实现文本转语音功能
+                                }) {
+                                    Image(systemName: "speaker.wave.2")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("朗读翻译结果")
+                            }
+                            .padding(16)
+                        }
                     }
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(NSColor.separatorColor).opacity(0.5), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
         }
         .frame(minWidth: 650, minHeight: 600)
