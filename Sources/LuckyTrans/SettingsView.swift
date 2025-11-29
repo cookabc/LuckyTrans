@@ -34,7 +34,8 @@ struct SettingsView: View {
         NavigationSplitView {
             // 侧边栏
             SettingsSidebar(selectedPage: $selectedPage)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 250)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 250)
+                .background(Color(NSColor.controlBackgroundColor))
         } detail: {
             // 内容区域
             Group {
@@ -56,7 +57,7 @@ struct SettingsView: View {
             .toolbar(.hidden, for: .windowToolbar)
         }
         .toolbar(.hidden, for: .windowToolbar)
-        .frame(width: 750, height: 600)
+        .frame(width: 700, height: 500)
     }
 }
 
@@ -67,8 +68,15 @@ struct SettingsSidebar: View {
     var body: some View {
         List(selection: $selectedPage) {
             ForEach(SettingsPage.allCases) { page in
-                Label(page.title, systemImage: page.icon)
-                    .tag(page)
+                Label {
+                    Text(page.title)
+                        .font(.system(size: 13, weight: .medium))
+                } icon: {
+                    Image(systemName: page.icon)
+                        .foregroundColor(.accentColor)
+                }
+                .tag(page)
+                .padding(.vertical, 4)
             }
         }
         .listStyle(.sidebar)
@@ -78,13 +86,30 @@ struct SettingsSidebar: View {
 // General 设置页面
 struct GeneralSettingsView: View {
     var body: some View {
-        VStack {
-            Text("General Settings")
-                .font(.title2)
-                .padding()
-            Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("General")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("App Preferences")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle("Launch at login", isOn: .constant(false)) // Placeholder
+                        Toggle("Show in menu bar", isOn: .constant(true)) // Placeholder
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(10)
+                }
+                
+                Spacer()
+            }
+            .padding(30)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -101,7 +126,7 @@ struct APIModelsSettingsView: View {
     // 生成与实际 key 长度相同的占位符
     private var placeholder: String {
         if savedKeyLength > 0 {
-            return String(repeating: "•", count: savedKeyLength)
+            return String(repeating: "•", count: min(savedKeyLength, 20))
         }
         return "••••••••••••" // 默认占位符
     }
@@ -111,139 +136,150 @@ struct APIModelsSettingsView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("API & Models")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
                 // API 配置部分
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("API Configuration")
+                    Label("Configuration", systemImage: "server.rack")
                         .font(.headline)
-                        .padding(.bottom, 4)
                     
-                    // API 端点
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("API Endpoint")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        ScrollableTextField(text: $apiEndpoint, placeholder: "")
-                            .frame(height: 24)
-                    }
-                    
-                    Divider()
-                    
-                    // API Key
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("API Key")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        HStack(spacing: 8) {
-                            ScrollableTextField(
-                                text: Binding(
-                                    get: {
-                                        // 如果隐藏且已保存，返回占位符
-                                        if !showAPIKey && hasSavedKey {
-                                            return placeholder
-                                        }
-                                        return apiKey
-                                    },
-                                    set: { newValue in
-                                        // 如果输入的是占位符，忽略
-                                        if newValue != placeholder {
-                                            apiKey = newValue
-                                        }
-                                    }
-                                ),
-                                placeholder: "",
-                                isSecure: !showAPIKey
-                            )
-                            .id("apiKey_\(showAPIKey)") // 通过 id 强制重新创建视图以切换安全模式
-                            .frame(height: 24)
+                    VStack(alignment: .leading, spacing: 20) {
+                        // API 端点
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("API Endpoint")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                             
-                            // 眼睛图标按钮
-                            Button(action: {
-                                if !showAPIKey {
-                                    // 点击"显示"时，加载真实的 key
-                                    if apiKey.isEmpty || apiKey == placeholder {
-                                        if let savedKey = settingsManager.getAPIKey() {
-                                            apiKey = savedKey
+                            TextField("https://api.example.com/v1", text: $apiEndpoint)
+                                .textFieldStyle(.plain)
+                                .padding(10)
+                                .background(Color(NSColor.textBackgroundColor))
+                                .cornerRadius(6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                                )
+                        }
+                        
+                        // API Key
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("API Key")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            HStack(spacing: 0) {
+                                if showAPIKey {
+                                    TextField("sk-...", text: $apiKey)
+                                        .textFieldStyle(.plain)
+                                        .padding(10)
+                                } else {
+                                    SecureField("sk-...", text: Binding(
+                                        get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
+                                        set: { apiKey = $0 }
+                                    ))
+                                    .textFieldStyle(.plain)
+                                    .padding(10)
+                                }
+                                
+                                Button(action: {
+                                    if !showAPIKey {
+                                        // 点击"显示"时，加载真实的 key
+                                        if apiKey.isEmpty || apiKey == placeholder {
+                                            if let savedKey = settingsManager.getAPIKey() {
+                                                apiKey = savedKey
+                                            }
+                                        }
+                                    } else {
+                                        // 点击"隐藏"时，如果已保存，恢复占位符
+                                        if hasSavedKey {
+                                            apiKey = "" // Clear to show placeholder in get binding
                                         }
                                     }
-                                } else {
-                                    // 点击"隐藏"时，如果已保存，恢复占位符
-                                    if hasSavedKey {
-                                        apiKey = placeholder
-                                    }
+                                    showAPIKey.toggle()
+                                }) {
+                                    Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 10)
                                 }
-                                showAPIKey.toggle()
-                            }) {
-                                Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                    .foregroundColor(.secondary)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-                            .help(showAPIKey ? "隐藏" : "显示")
+                            .background(Color(NSColor.textBackgroundColor))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        
+                        // 模型名称
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Model Name")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            Picker("", selection: $modelName) {
+                                ForEach(availableModels, id: \.self) { model in
+                                    Text(model).tag(model)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: 200)
                         }
                     }
-                    
-                    Divider()
-                    
-                    // 模型名称
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Model Name")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Picker("", selection: $modelName) {
-                            ForEach(availableModels, id: \.self) { model in
-                                Text(model).tag(model)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(height: 24)
-                    }
+                    .padding(20)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
                 
                 // 外观部分
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Appearance")
+                    Label("Appearance", systemImage: "paintpalette")
                         .font(.headline)
-                        .padding(.bottom, 4)
                     
-                    // 主题模式
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Theme Mode")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Picker("", selection: $settingsManager.appearanceMode) {
-                            ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
-                                Text(mode.displayName).tag(mode)
+                    VStack(alignment: .leading, spacing: 20) {
+                        // 主题模式
+                        HStack {
+                            Text("Theme Mode")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settingsManager.appearanceMode) {
+                                ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
+                                    Text(mode.displayName).tag(mode)
+                                }
                             }
+                            .pickerStyle(.segmented)
+                            .frame(width: 200)
                         }
-                        .pickerStyle(.segmented)
                     }
+                    .padding(20)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
                 
-            }
-            .padding()
-            
-            // 底部保存按钮
-            VStack(spacing: 0) {
-                Divider()
+                // 保存按钮
                 HStack {
                     Spacer()
-                    Button("保存") {
-                        saveAllSettings()
+                    Button(action: saveAllSettings) {
+                        Text("Save Changes")
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .padding()
+                    .tint(.accentColor)
                 }
-                .background(Color(NSColor.controlBackgroundColor))
+                .padding(.top, 10)
+                
+                Spacer()
             }
+            .padding(30)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
@@ -251,7 +287,7 @@ struct APIModelsSettingsView: View {
             // 如果有已保存的 key，获取其长度并设置占位符
             if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
                 savedKeyLength = savedKey.count
-                apiKey = placeholder
+                // apiKey 初始为空，由 Binding 处理显示 placeholder
             }
         }
     }
@@ -289,39 +325,47 @@ struct ShortcutsSettingsView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Shortcuts")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
                 // 快捷键部分
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Shortcut")
+                    Label("Global Shortcut", systemImage: "keyboard")
                         .font(.headline)
-                        .padding(.bottom, 4)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Shortcut Recorder")
+                        Text("Activation Key")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        ShortcutRecorderView(
-                            keyCode: $settingsManager.shortcutKeyCode,
-                            modifiers: $settingsManager.shortcutModifiers
-                        )
-                        .frame(height: 24)
+                        
+                        HStack {
+                            ShortcutRecorderView(
+                                keyCode: $settingsManager.shortcutKeyCode,
+                                modifiers: $settingsManager.shortcutModifiers
+                            )
+                            .frame(height: 28)
+                            
+                            Spacer()
+                        }
                     }
+                    .padding(20)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
                 
                 // 权限部分
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Permissions")
+                    Label("Permissions", systemImage: "lock.shield")
                         .font(.headline)
-                        .padding(.bottom, 4)
                     
                     HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Accessibility API Access")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Accessibility Access")
                                 .font(.subheadline)
-                            Text("Required for text selection capture")
+                                .fontWeight(.medium)
+                            Text("Required to capture selected text from other apps.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -329,28 +373,36 @@ struct ShortcutsSettingsView: View {
                         Spacer()
                         
                         if hasAccessibilityPermission {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.title3)
-                                .frame(width: 24, height: 24)
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("Granted")
+                                    .font(.subheadline)
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(20)
                         } else {
-                            Button("Open System Settings") {
+                            Button("Open Settings") {
                                 openSystemSettings()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.borderedProminent)
                             .controlSize(.small)
                         }
                     }
+                    .padding(20)
                     .frame(maxWidth: .infinity)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
                 }
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
                 
                 Spacer()
             }
-            .padding()
+            .padding(30)
         }
+        .background(Color(NSColor.windowBackgroundColor))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             checkAccessibilityPermission()
