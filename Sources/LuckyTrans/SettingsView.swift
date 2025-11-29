@@ -66,6 +66,7 @@ struct SettingsSidebar: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Settings")
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
