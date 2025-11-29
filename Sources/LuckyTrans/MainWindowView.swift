@@ -337,9 +337,6 @@ struct MainWindowView: View {
             }
         }
         .frame(minWidth: 650, minHeight: 600)
-            }
-        }
-        .frame(minWidth: 650, minHeight: 600)
         .onAppear {
             // 首次启动时，如果没有配置 API Key，自动打开设置窗口
             if !settingsManager.hasAPIKey() {
