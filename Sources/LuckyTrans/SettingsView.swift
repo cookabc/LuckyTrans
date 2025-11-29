@@ -31,13 +31,11 @@ struct SettingsView: View {
     @State private var selectedPage: SettingsPage = .apiModels
     
     var body: some View {
-        NavigationSplitView {
-            // 侧边栏
+        HStack(spacing: 0) {
             SettingsSidebar(selectedPage: $selectedPage)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 250)
+                .frame(width: 200)
                 .background(Color(NSColor.controlBackgroundColor))
-        } detail: {
-            // 内容区域
+            Divider()
             Group {
                 switch selectedPage {
                 case .general:
@@ -49,14 +47,7 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    EmptyView()
-                }
-            }
-            .toolbar(.hidden, for: .windowToolbar)
         }
-        .toolbar(.hidden, for: .windowToolbar)
         .frame(width: 700, height: 500)
     }
 }
