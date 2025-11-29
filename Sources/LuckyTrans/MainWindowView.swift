@@ -8,7 +8,7 @@ struct MainWindowView: View {
     @State private var errorMessage: String?
     @State private var translationTask: Task<Void, Never>?
     
-    private let languages = ["中文", "English", "日本語", "한국어", "Français", "Deutsch", "Español", "Italiano", "Português", "Русский"]
+    private let languages = ["中文", "英语", "日语", "韩语", "法语", "德语", "西班牙语", "意大利语", "葡萄牙语", "俄语"]
     
     private func openSettingsWindow() {
         SettingsWindowManager.shared.showSettings()
@@ -113,7 +113,7 @@ struct MainWindowView: View {
     
     // 获取翻译方向显示文本
     private var translationDirection: String {
-        let source = "Auto"
+        let source = "自动"
         let target = settingsManager.targetLanguage
         return "\(source) → \(target)"
     }
@@ -124,7 +124,7 @@ struct MainWindowView: View {
             HStack(alignment: .center) {
                 // 语言选择
                 HStack(spacing: 8) {
-                    Text("Auto")
+                    Text("自动")
                         .foregroundColor(.secondary)
                         .font(.system(size: 14, weight: .medium))
                     

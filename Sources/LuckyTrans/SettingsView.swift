@@ -5,23 +5,20 @@ import ApplicationServices
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
     case apiModels
-    case shortcuts
     
     var id: String { rawValue }
     
     var title: String {
         switch self {
-        case .general: return "General"
-        case .apiModels: return "API & Models"
-        case .shortcuts: return "Shortcuts"
+        case .general: return "常规"
+        case .apiModels: return "API 与模型"
         }
     }
     
     var icon: String {
         switch self {
-        case .general: return "gearshape"
-        case .apiModels: return "globe"
-        case .shortcuts: return "keyboard"
+            case .general: return "gearshape"
+            case .apiModels: return "globe"
         }
     }
 }
@@ -42,13 +39,11 @@ struct SettingsView: View {
                     GeneralSettingsView()
                 case .apiModels:
                     APIModelsSettingsView()
-                case .shortcuts:
-                    ShortcutsSettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 700, height: 500)
+        .frame(minWidth: 700, minHeight: 500)
     }
 }
 
@@ -77,20 +72,21 @@ struct SettingsSidebar: View {
 // General 设置页面
 struct GeneralSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @State private var hasAccessibilityPermission: Bool = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("General")
+                Text("常规")
                     .font(.title2)
                     .fontWeight(.bold)
                 
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("App Preferences")
+                    Text("应用偏好设置")
                         .font(.headline)
                     
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Launch at login", isOn: $settingsManager.launchAtLogin)
-                        Toggle("Show in menu bar", isOn: $settingsManager.showInMenuBar)
+                        Toggle("开机自启动", isOn: $settingsManager.launchAtLogin)
+                        Toggle("在菜单栏显示", isOn: $settingsManager.showInMenuBar)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -98,9 +94,113 @@ struct GeneralSettingsView: View {
                     .cornerRadius(10)
                 }
                 
+                // 外观部分
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("外观", systemImage: "paintpalette")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            Text("主题模式")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settingsManager.appearanceMode) {
+                                ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
+                                    Text(mode.displayName).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 200)
+                        }
+                    }
+                    .padding(20)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
+                }
+                
+                // 快捷键部分
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("全局快捷键", systemImage: "keyboard")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("唤起按键")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack {
+                            ShortcutRecorderView(
+                                keyCode: $settingsManager.shortcutKeyCode,
+                                modifiers: $settingsManager.shortcutModifiers
+                            )
+                            .frame(height: 28)
+                            Spacer()
+                        }
+                    }
+                    .padding(20)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
+                }
+                
+                // 权限部分
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("权限", systemImage: "lock.shield")
+                        .font(.headline)
+                    
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("辅助功能访问")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text("需要此权限以便从其他应用中获取选中文本。")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if hasAccessibilityPermission {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("已授权")
+                                    .font(.subheadline)
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(20)
+                        } else {
+                            Button("打开系统设置") {
+                                openSystemSettings()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
+                }
+                
                 Spacer()
             }
             .padding(30)
+        }
+        .onAppear {
+            checkAccessibilityPermission()
+        }
+    }
+    
+    private func checkAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
+    }
+    
+    private func openSystemSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
     }
 }
@@ -129,19 +229,19 @@ struct APIModelsSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("API & Models")
+                Text("API 与模型")
                     .font(.title2)
                     .fontWeight(.bold)
                 
                 // API 配置部分
                 VStack(alignment: .leading, spacing: 16) {
-                    Label("Configuration", systemImage: "server.rack")
+                    Label("配置", systemImage: "server.rack")
                         .font(.headline)
                     
                     VStack(alignment: .leading, spacing: 20) {
                         // API 端点
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("API Endpoint")
+                            Text("API 地址")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
@@ -158,7 +258,7 @@ struct APIModelsSettingsView: View {
                         
                         // API Key
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("API Key")
+                            Text("API 密钥")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
@@ -208,7 +308,7 @@ struct APIModelsSettingsView: View {
                         
                         // 模型名称
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Model Name")
+                            Text("模型名称")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
@@ -226,37 +326,13 @@ struct APIModelsSettingsView: View {
                     .cornerRadius(12)
                 }
                 
-                // 外观部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("Appearance", systemImage: "paintpalette")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 20) {
-                        // 主题模式
-                        HStack {
-                            Text("Theme Mode")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settingsManager.appearanceMode) {
-                                ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
-                                    Text(mode.displayName).tag(mode)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(width: 200)
-                        }
-                    }
-                    .padding(20)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
+                
                 
                 // 保存按钮
                 HStack {
                     Spacer()
                     Button(action: saveAllSettings) {
-                        Text("Save Changes")
+                        Text("保存更改")
                             .fontWeight(.medium)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
@@ -310,105 +386,4 @@ struct APIModelsSettingsView: View {
     }
 }
 
-// Shortcuts 设置页面
-struct ShortcutsSettingsView: View {
-    @EnvironmentObject var settingsManager: SettingsManager
-    @State private var hasAccessibilityPermission: Bool = false
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("Shortcuts")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                // 快捷键部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("Global Shortcut", systemImage: "keyboard")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Activation Key")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        HStack {
-                            ShortcutRecorderView(
-                                keyCode: $settingsManager.shortcutKeyCode,
-                                modifiers: $settingsManager.shortcutModifiers
-                            )
-                            .frame(height: 28)
-                            
-                            Spacer()
-                        }
-                    }
-                    .padding(20)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
-                
-                // 权限部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("Permissions", systemImage: "lock.shield")
-                        .font(.headline)
-                    
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Accessibility Access")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text("Required to capture selected text from other apps.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        if hasAccessibilityPermission {
-                            HStack(spacing: 6) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Granted")
-                                    .font(.subheadline)
-                                    .foregroundColor(.green)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(20)
-                        } else {
-                            Button("Open Settings") {
-                                openSystemSettings()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
-                
-                Spacer()
-            }
-            .padding(30)
-        }
-        .background(Color(NSColor.windowBackgroundColor))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            checkAccessibilityPermission()
-        }
-    }
-    
-    private func checkAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-        hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
-    }
-    
-    private func openSystemSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-}
+// 已将外观与快捷键设置合并至“常规”页面

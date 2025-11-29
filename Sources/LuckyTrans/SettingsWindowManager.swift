@@ -72,8 +72,8 @@ class SettingsWindowManager: ObservableObject {
             defer: false
         )
         
-        // 只设置最大高度，不设置最小高度（让窗口可以根据内容自适应）
-        window.maxSize = NSSize(width: 750, height: 800)
+        // 设置最小尺寸，允许用户自由调整到更大的尺寸
+        window.minSize = NSSize(width: 700, height: 500)
         
         window.title = "设置"
         window.titlebarAppearsTransparent = false
