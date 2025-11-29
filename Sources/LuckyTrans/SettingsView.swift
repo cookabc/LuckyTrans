@@ -48,6 +48,12 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    EmptyView()
+                }
+            }
+            .toolbar(.hidden, for: .windowToolbar)
         }
         .frame(width: 750, height: 600)
     }

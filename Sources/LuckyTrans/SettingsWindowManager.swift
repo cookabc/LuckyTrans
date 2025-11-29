@@ -76,6 +76,8 @@ class SettingsWindowManager: ObservableObject {
         window.maxSize = NSSize(width: 750, height: 800)
         
         window.title = "设置"
+        window.titlebarAppearsTransparent = false
+        window.toolbar = nil
         window.contentViewController = hostingController
         
         // 应用当前的主题设置
