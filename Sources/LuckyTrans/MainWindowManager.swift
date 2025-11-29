@@ -6,21 +6,6 @@ import QuartzCore
 class NonAnimatedWindow: NSWindow {
     private var isClosing = false
     
-    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
-        super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
-        
-        // 设置窗口圆角
-        self.isOpaque = false
-        self.backgroundColor = .clear
-        self.hasShadow = true
-        
-        // 使用 layer 实现圆角
-        if let contentView = self.contentView {
-            contentView.wantsLayer = true
-            contentView.layer?.cornerRadius = 16
-            contentView.layer?.masksToBounds = true
-        }
-    }
     
     override func close() {
         // 防止重复关闭
@@ -101,8 +86,6 @@ class MainWindowManager: ObservableObject {
         )
         
         window.title = "LuckyTrans"
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
         window.contentViewController = hostingController
         window.center()
         
@@ -118,13 +101,6 @@ class MainWindowManager: ObservableObject {
             appearance = NSAppearance(named: .darkAqua)
         }
         window.appearance = appearance ?? NSAppearance.currentDrawing()
-        
-        // 确保窗口背景透明以显示圆角
-        if let contentView = window.contentView {
-            contentView.wantsLayer = true
-            contentView.layer?.cornerRadius = 16
-            contentView.layer?.masksToBounds = true
-        }
         
         // 禁用窗口关闭动画，直接关闭
         window.isReleasedWhenClosed = false
