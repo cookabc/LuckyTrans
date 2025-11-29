@@ -55,6 +55,7 @@ struct SettingsView: View {
             }
             .toolbar(.hidden, for: .windowToolbar)
         }
+        .toolbar(.hidden, for: .windowToolbar)
         .frame(width: 750, height: 600)
     }
 }
