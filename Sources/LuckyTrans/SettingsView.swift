@@ -311,7 +311,7 @@ struct ShortcutsSettingsView: View {
                         .font(.headline)
                         .padding(.bottom, 4)
                     
-                    HStack {
+                    HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Accessibility API Access")
                                 .font(.subheadline)
@@ -326,6 +326,7 @@ struct ShortcutsSettingsView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                                 .font(.title3)
+                                .frame(width: 24, height: 24)
                         } else {
                             Button("Open System Settings") {
                                 openSystemSettings()
@@ -334,6 +335,7 @@ struct ShortcutsSettingsView: View {
                             .controlSize(.small)
                         }
                     }
+                    .frame(maxWidth: .infinity)
                 }
                 .padding()
                 .background(Color(NSColor.controlBackgroundColor))
