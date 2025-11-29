@@ -141,42 +141,31 @@ class SettingsWindowManager: ObservableObject {
     private func hideTitleBarButtons(window: NSWindow) {
         // 移除所有标题栏附件视图控制器（这些通常包含导航按钮）
         let accessories = window.titlebarAccessoryViewControllers
-        // 从后往前移除，避免索引变化
         for i in stride(from: accessories.count - 1, through: 0, by: -1) {
             window.removeTitlebarAccessoryViewController(at: i)
         }
         
-        // 遍历窗口的标题栏视图，隐藏导航按钮
-        func findAndHideButtons(in view: NSView) {
-            // 查找并隐藏可能的导航按钮
-            if let button = view as? NSButton {
-                // 排除标准窗口按钮（关闭、最小化、全屏）
-                let standardButtons = [
-                    window.standardWindowButton(.closeButton),
-                    window.standardWindowButton(.miniaturizeButton),
-                    window.standardWindowButton(.zoomButton)
-                ]
-                
-                if !standardButtons.contains(where: { $0 === button }) {
-                    // 检查按钮位置：如果在标题栏右侧区域，则隐藏
-                    let buttonFrame = button.convert(button.bounds, to: nil)
-                    let windowFrame = window.frame
-                    // 如果按钮在窗口右侧区域（标题栏右侧），则隐藏
-                    if buttonFrame.maxX > windowFrame.width * 0.7 {
-                        button.isHidden = true
-                    }
-                }
+        func shouldKeep(_ view: NSView) -> Bool {
+            let standardButtons = [
+                window.standardWindowButton(.closeButton),
+                window.standardWindowButton(.miniaturizeButton),
+                window.standardWindowButton(.zoomButton)
+            ]
+            return standardButtons.contains { $0 === view }
+        }
+        
+        func hideNonStandardControls(in view: NSView) {
+            // 隐藏除标准三键外的所有控制视图（包括 NSSegmentedControl 等）
+            if let control = view as? NSControl, !shouldKeep(control) {
+                control.isHidden = true
             }
-            
             for subview in view.subviews {
-                findAndHideButtons(in: subview)
+                hideNonStandardControls(in: subview)
             }
         }
         
-        // 从窗口的标题栏视图开始查找
         if let titlebarView = window.standardWindowButton(.closeButton)?.superview {
-            findAndHideButtons(in: titlebarView)
+            hideNonStandardControls(in: titlebarView)
         }
     }
 }
-

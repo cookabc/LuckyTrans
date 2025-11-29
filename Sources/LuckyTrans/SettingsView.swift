@@ -85,6 +85,7 @@ struct SettingsSidebar: View {
 
 // General 设置页面
 struct GeneralSettingsView: View {
+    @EnvironmentObject var settingsManager: SettingsManager
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -97,8 +98,8 @@ struct GeneralSettingsView: View {
                         .font(.headline)
                     
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Launch at login", isOn: .constant(false)) // Placeholder
-                        Toggle("Show in menu bar", isOn: .constant(true)) // Placeholder
+                        Toggle("Launch at login", isOn: $settingsManager.launchAtLogin)
+                        Toggle("Show in menu bar", isOn: $settingsManager.showInMenuBar)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -420,4 +421,3 @@ struct ShortcutsSettingsView: View {
         }
     }
 }
-

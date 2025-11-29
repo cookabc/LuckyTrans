@@ -20,6 +20,17 @@ class MenuBarManager: ObservableObject {
         
         setupPopover()
     }
+
+    func remove() {
+        if let pop = popover, pop.isShown {
+            pop.performClose(nil)
+        }
+        popover = nil
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+        }
+        statusItem = nil
+    }
     
     private func setupPopover() {
         popover = NSPopover()
@@ -75,4 +86,3 @@ struct MenuBarView: View {
         .frame(width: 200)
     }
 }
-

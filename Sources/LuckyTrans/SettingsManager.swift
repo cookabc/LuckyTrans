@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ServiceManagement
 import Carbon
 
 class SettingsManager: ObservableObject {
@@ -43,6 +44,21 @@ class SettingsManager: ObservableObject {
             updateShortcut()
         }
     }
+
+    // 常规设置
+    @Published var launchAtLogin: Bool {
+        didSet {
+            UserDefaults.standard.set(launchAtLogin, forKey: "launchAtLogin")
+            applyLaunchAtLogin()
+        }
+    }
+    
+    @Published var showInMenuBar: Bool {
+        didSet {
+            UserDefaults.standard.set(showInMenuBar, forKey: "showInMenuBar")
+            applyMenuBarVisibility()
+        }
+    }
     
     enum AppearanceMode: String, CaseIterable {
         case system = "system"
@@ -80,9 +96,13 @@ class SettingsManager: ObservableObject {
             self.shortcutKeyCode = 0x11 // 'T' key
             self.shortcutModifiers = UInt32(cmdKey)
         }
+        // 加载常规设置
+        self.launchAtLogin = UserDefaults.standard.bool(forKey: "launchAtLogin")
+        self.showInMenuBar = UserDefaults.standard.object(forKey: "showInMenuBar") as? Bool ?? true
         
         // 应用保存的主题设置
         applyAppearance()
+        applyMenuBarVisibility()
     }
     
     private func updateShortcut() {
@@ -108,6 +128,30 @@ class SettingsManager: ObservableObject {
             window.appearance = appearance ?? NSAppearance.currentDrawing()
         }
     }
+
+    private func applyMenuBarVisibility() {
+        if showInMenuBar {
+            MenuBarManager.shared.setup()
+        } else {
+            MenuBarManager.shared.remove()
+        }
+    }
+    
+    private func applyLaunchAtLogin() {
+        if #available(macOS 13.0, *) {
+            do {
+                if launchAtLogin {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                print("LaunchAtLogin update failed: \(error)")
+            }
+        } else {
+            print("LaunchAtLogin not supported on this macOS version")
+        }
+    }
     
     // API Key 存储到 UserDefaults（不再使用 Keychain，避免每次启动需要密码）
     func saveAPIKey(_ apiKey: String) -> Bool {
@@ -124,4 +168,3 @@ class SettingsManager: ObservableObject {
         return getAPIKey() != nil && !getAPIKey()!.isEmpty
     }
 }
-
