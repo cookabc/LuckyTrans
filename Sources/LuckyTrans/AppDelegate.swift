@@ -21,6 +21,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 初始化菜单栏
         MenuBarManager.shared.setup()
         
+        // 监听来自菜单栏的触发通知
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTriggerSelectionTranslate),
+            name: NSNotification.Name("TriggerSelectionTranslate"),
+            object: nil
+        )
+        
         // 检查辅助功能权限
         checkAccessibilityPermission()
         
@@ -37,6 +45,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // 即使主窗口关闭，应用也不退出（因为有菜单栏图标）
         return false
+    }
+    
+    @objc private func handleTriggerSelectionTranslate() {
+        handleSelectionTranslate()
     }
     
     private func checkAccessibilityPermission() {
@@ -84,25 +96,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: ShortcutManagerDelegate {
     func shortcutDidTrigger() {
-        handleTranslationRequest()
+        // 快捷键默认触发划词翻译（内联窗口）
+        handleSelectionTranslate()
     }
     
-    private func handleTranslationRequest() {
-        // 重要：先获取文本，再显示窗口，避免焦点切换导致无法获取其他应用的文本
-        
-        // 检查权限状态
+    private func handleSelectionTranslate() {
+        // 1. 检查权限
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let hasPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
         
-        // 如果没有权限，先显示窗口再显示错误
         if !hasPermission {
+            // 没有权限，引导用户去设置
             MainWindowManager.shared.showMainWindow()
             NotificationCenter.default.post(
                 name: NSNotification.Name("UpdateSelectedText"),
                 object: nil,
                 userInfo: ["error": "无法获取选中的文本，请确保已授予辅助功能权限。\n\n请在系统设置 > 隐私与安全性 > 辅助功能中启用 LuckyTrans"]
             )
-            // 打开系统设置
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                     NSWorkspace.shared.open(url)
@@ -111,36 +121,40 @@ extension AppDelegate: ShortcutManagerDelegate {
             return
         }
         
-        // 先获取选中的文本（在激活窗口之前）
+        // 2. 获取文本
         let capturedText = TextCaptureManager.shared.getSelectedText()
         
-        // 现在才显示主窗口
-        MainWindowManager.shared.showMainWindow()
+        guard let text = capturedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            // 获取失败或为空，不显示内联窗口，可以显示主窗口提示
+            // 或者只是忽略（避免打扰用户）
+            // 这里选择显示主窗口并提示
+             MainWindowManager.shared.showMainWindow()
+             NotificationCenter.default.post(
+                 name: NSNotification.Name("UpdateSelectedText"),
+                 object: nil,
+                 userInfo: ["error": "未检测到选中的文本。请先选中文本。"]
+             )
+            return
+        }
         
-        // 处理获取到的文本
-        if let selectedText = capturedText {
-            let trimmedText = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmedText.isEmpty {
-                // 更新主窗口的文本
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("UpdateSelectedText"),
-                    object: nil,
-                    userInfo: ["text": trimmedText]
-                )
-            } else {
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("UpdateSelectedText"),
-                    object: nil,
-                    userInfo: ["error": "无法获取选中的文本。请先选中文本，或尝试在文本编辑器中使用。"]
-                )
+        // 3. 显示内联窗口（Loading 状态）
+        showTranslationWindow(with: .loading(text))
+        
+        // 4. 执行翻译
+        Task {
+            do {
+                // 默认翻译为简体中文，后续可配置
+                let targetLang = SettingsManager.shared.targetLanguage
+                let translation = try await TranslationService.shared.translate(text: text, targetLanguage: targetLang)
+                
+                await MainActor.run {
+                    showTranslationWindow(with: .success(original: text, translation: translation))
+                }
+            } catch {
+                await MainActor.run {
+                    showTranslationWindow(with: .error(error.localizedDescription))
+                }
             }
-        } else {
-            // 获取失败，在主窗口显示错误
-            NotificationCenter.default.post(
-                name: NSNotification.Name("UpdateSelectedText"),
-                object: nil,
-                userInfo: ["error": "无法获取选中的文本。请先选中文本，或尝试在文本编辑器中使用。"]
-            )
         }
     }
     
@@ -159,4 +173,3 @@ extension AppDelegate: ShortcutManagerDelegate {
         alert.runModal()
     }
 }
-
