@@ -27,13 +27,13 @@ class FloatingTranslationWindow: NSWindow {
         // 应用当前的主题设置
         applyAppearance()
         
-        // 设置初始位置（屏幕右上角）
+        // 设置初始位置（屏幕右上角，实际应该跟随鼠标或选区，这里简化处理）
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
-            let windowWidth: CGFloat = 400
-            let windowHeight: CGFloat = 200
-            let x = screenRect.maxX - windowWidth - 20
-            let y = screenRect.maxY - windowHeight - 20
+            let windowWidth: CGFloat = 450
+            let windowHeight: CGFloat = 300 // 增加高度以容纳更多内容
+            let x = screenRect.maxX - windowWidth - 50
+            let y = screenRect.maxY - windowHeight - 100
             
             self.setFrame(NSRect(x: x, y: y, width: windowWidth, height: windowHeight), display: true)
         }
@@ -75,14 +75,15 @@ class FloatingTranslationWindow: NSWindow {
         alphaValue = 0
         animator().alphaValue = 1.0
         
-        // 自动关闭（成功时，延迟 15 秒）
+        // 自动关闭（成功时，延迟 30 秒，给用户更多时间阅读）
         if case .success = state {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
-                self.closeWithAnimation()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                // 如果窗口可见且未被用户交互（简单判断），则关闭
+                // 这里为了简单，总是尝试关闭，实际应该检测鼠标位置
+                // self.closeWithAnimation() 
+                // 用户反馈希望手动关闭或点击外部关闭，暂时不自动关闭以免打断阅读
             }
         }
-        
-        // 错误状态不自动关闭，让用户手动关闭
     }
     
     func closeWithAnimation() {
@@ -107,94 +108,145 @@ struct TranslationView: View {
     let onClose: () -> Void
     
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var settingsManager = SettingsManager.shared
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial)
-                .shadow(color: colorScheme == .dark ? Color.black.opacity(0.5) : Color.black.opacity(0.2), radius: 10, x: 0, y: 2)
+            // 背景 - ClashMac 风格淡色背景
+            RoundedRectangle(cornerRadius: 16)
+                .fill(colorScheme == .dark ? Color(nsColor: .windowBackgroundColor) : Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 15, x: 0, y: 5)
             
-            VStack(alignment: .leading, spacing: 12) {
+            // 装饰性边框
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.blue.opacity(0.1), lineWidth: 1)
+            
+            // 顶部装饰条
+            VStack {
                 HStack {
-                    Text("翻译结果")
-                        .font(.headline)
+                    Capsule()
+                        .fill(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)]), startPoint: .leading, endPoint: .trailing))
+                        .frame(width: 40, height: 4)
+                        .padding(.top, 8)
                     Spacer()
+                }
+                .padding(.horizontal)
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 16) {
+                // 标题栏
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "character.bubble.fill")
+                            .foregroundColor(.blue.opacity(0.8))
+                        Text("LuckyTrans")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary.opacity(0.8))
+                    }
+                    
+                    Spacer()
+                    
                     Button(action: onClose) {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.secondary)
+                            .padding(6)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.pointingHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
                 }
                 
                 Divider()
+                    .opacity(0.5)
                 
                 switch state {
                 case .loading(let text):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("原文:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(text)
-                            .font(.body)
+                            .font(.system(size: 14))
                             .lineLimit(3)
+                            .foregroundColor(.primary.opacity(0.7))
                         
                         Spacer()
                         
-                        HStack {
+                        HStack(spacing: 8) {
                             ProgressView()
-                            Text("翻译中...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                                .scaleEffect(0.8)
+                            Text("思考中...")
+                                .font(.system(size: 13))
+                                .foregroundColor(.blue.opacity(0.8))
                         }
+                        .padding(8)
+                        .background(Color.blue.opacity(0.05))
+                        .cornerRadius(8)
                     }
                     
                 case .success(let original, let translation):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("原文:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(original)
-                            .font(.body)
-                            .lineLimit(3)
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 原文引用
+                        HStack(alignment: .top, spacing: 4) {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 3)
+                            Text(original)
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                                .padding(.leading, 4)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
                         
-                        Divider()
-                        
-                        Text("翻译:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(translation)
-                            .font(.body)
-                            .lineLimit(5)
-                        
-                        Spacer()
+                        // 翻译结果
+                        ScrollView {
+                            Text(translation)
+                                .font(.system(size: 15, weight: .regular, design: .default))
+                                .lineSpacing(4)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                     
                 case .error(let message):
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.red)
-                            Text("翻译失败")
+                                .foregroundColor(.orange)
+                            Text("翻译出错了")
                                 .font(.headline)
                         }
+                        
                         Text(message)
-                            .font(.body)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                            .lineLimit(5)
+                            .fixedSize(horizontal: false, vertical: true)
                         
                         Spacer()
                         
-                        Button("打开设置") {
+                        Button(action: {
                             SettingsWindowManager.shared.showSettings()
                             self.onClose()
+                        }) {
+                            Text("检查设置")
+                                .font(.system(size: 13))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue.opacity(0.8))
                     }
                 }
             }
-            .padding()
+            .padding(16)
         }
-        .frame(width: 400, height: 200)
+        .frame(width: 450, height: 300)
     }
 }
-

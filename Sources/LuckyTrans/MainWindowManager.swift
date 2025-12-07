@@ -79,13 +79,15 @@ class MainWindowManager: ObservableObject {
         
         // 使用自定义窗口类，禁用关闭动画
         let window = NonAnimatedWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 650, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 600),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
         window.title = "LuckyTrans"
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.contentViewController = hostingController
         window.center()
         
