@@ -122,6 +122,17 @@ struct MainWindowView: View {
         VStack(spacing: 0) {
             // 标题栏区域
             HStack(alignment: .center) {
+                HStack(spacing: 10) {
+                    Image(systemName: "globe")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("LuckyTrans")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("运行中")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 13))
+                }
+                
                 // 语言选择
                 HStack(spacing: 8) {
                     Text("自动")
@@ -172,8 +183,21 @@ struct MainWindowView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.vertical, 14)
             .background(Color(NSColor.controlBackgroundColor))
+
+            HStack {
+                Picker("", selection: $settingsManager.translationMode) {
+                    ForEach(SettingsManager.TranslationMode.allCases, id: \.self) { m in
+                        Text(m.displayName).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 380)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
             
             Divider()
                 .opacity(0.5)
@@ -212,11 +236,13 @@ struct MainWindowView: View {
                                 .frame(minHeight: 120)
                         }
                         .padding(12)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.blue.opacity(0.08))
+                        )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.blue.opacity(0.18), lineWidth: 1)
                         )
                         
                         if let error = errorMessage, !error.isEmpty {
@@ -337,11 +363,13 @@ struct MainWindowView: View {
                         }
                         .padding(16)
                         .frame(minHeight: 150, alignment: .top)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.purple.opacity(0.08))
+                        )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.purple.opacity(0.18), lineWidth: 1)
                         )
                     }
                 }
