@@ -74,6 +74,20 @@ class SettingsManager: ObservableObject {
         }
     }
     
+    enum TranslationMode: String, CaseIterable {
+        case standard = "standard"
+        case polish = "polish"
+        case summary = "summary"
+        
+        var displayName: String {
+            switch self {
+            case .standard: return "标准翻译"
+            case .polish: return "润色"
+            case .summary: return "总结"
+            }
+        }
+    }
+    
     private init() {
         // 从 UserDefaults 加载配置
         self.apiEndpoint = UserDefaults.standard.string(forKey: "apiEndpoint") ?? Config.defaultAPIEndpoint
@@ -83,6 +97,9 @@ class SettingsManager: ObservableObject {
         // 加载主题模式设置
         let savedMode = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
         self.appearanceMode = AppearanceMode(rawValue: savedMode) ?? .system
+        
+        let savedTranslationMode = UserDefaults.standard.string(forKey: "translationMode") ?? "standard"
+        self.translationMode = TranslationMode(rawValue: savedTranslationMode) ?? .standard
         
         // 加载快捷键设置
         let savedKeyCode = UserDefaults.standard.integer(forKey: "shortcutKeyCode")
@@ -103,6 +120,12 @@ class SettingsManager: ObservableObject {
         // 应用保存的主题设置
         applyAppearance()
         applyMenuBarVisibility()
+    }
+    
+    @Published var translationMode: TranslationMode {
+        didSet {
+            UserDefaults.standard.set(translationMode.rawValue, forKey: "translationMode")
+        }
     }
     
     private func updateShortcut() {

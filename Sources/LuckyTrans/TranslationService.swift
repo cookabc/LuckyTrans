@@ -59,7 +59,8 @@ class TranslationService {
         print("Translation API Endpoint (final): \(apiEndpoint)")
         
         let modelName = SettingsManager.shared.modelName
-        let request = TranslationRequest(text: text, targetLanguage: targetLanguage, model: modelName)
+        let mode = SettingsManager.shared.translationMode
+        let request = TranslationRequest(text: text, targetLanguage: targetLanguage, mode: mode, model: modelName)
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
@@ -183,4 +184,3 @@ class TranslationService {
         }
     }
 }
-
