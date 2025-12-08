@@ -34,12 +34,17 @@ struct ShortcutRecorderView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         // 创建一个容器视图
         let containerView = NSView()
+        containerView.wantsLayer = true
+        containerView.layer?.cornerRadius = 6
+        containerView.layer?.borderWidth = 1
+        containerView.layer?.borderColor = NSColor.secondaryLabelColor.withAlphaComponent(0.2).cgColor
+        containerView.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         
         let textField = ClickableTextField()
         textField.isEditable = false
         textField.isSelectable = false
-        textField.isBordered = true
-        textField.backgroundColor = .controlBackgroundColor
+        textField.isBordered = false
+        textField.drawsBackground = false
         textField.alignment = .center
         textField.placeholderString = "点击设置快捷键"
         textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
@@ -61,10 +66,10 @@ struct ShortcutRecorderView: NSViewRepresentable {
         button.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            textField.topAnchor.constraint(equalTo: containerView.topAnchor),
-            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            textField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            textField.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 4),
+            textField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4),
+            
             button.topAnchor.constraint(equalTo: containerView.topAnchor),
             button.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             button.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
@@ -72,6 +77,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
         ])
         
         context.coordinator.textField = textField
+        context.coordinator.containerView = containerView
         context.coordinator.keyCodeBinding = _keyCode
         context.coordinator.modifiersBinding = _modifiers
         return containerView
@@ -96,6 +102,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
     
     class Coordinator: NSObject {
         var textField: NSTextField?
+        var containerView: NSView?
         var isRecording = false
         var keyCodeBinding: Binding<UInt32>?
         var modifiersBinding: Binding<UInt32>?
@@ -123,7 +130,11 @@ struct ShortcutRecorderView: NSViewRepresentable {
             
             isRecording = true
             textField.stringValue = "按下快捷键..."
-            textField.backgroundColor = .selectedControlColor
+            textField.textColor = .white
+            
+            // 更新容器样式
+            containerView?.layer?.backgroundColor = NSColor.systemBlue.cgColor
+            containerView?.layer?.borderColor = NSColor.systemBlue.cgColor
             
             // 开始监听键盘事件
             eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
@@ -180,7 +191,7 @@ struct ShortcutRecorderView: NSViewRepresentable {
         func cancelRecording() {
             isRecording = false
             updateTextFieldDisplay()
-            textField?.backgroundColor = .controlBackgroundColor
+            resetStyle()
             if let monitor = eventMonitor {
                 NSEvent.removeMonitor(monitor)
                 eventMonitor = nil
@@ -190,11 +201,17 @@ struct ShortcutRecorderView: NSViewRepresentable {
         func finishRecording() {
             isRecording = false
             updateTextFieldDisplay()
-            textField?.backgroundColor = .controlBackgroundColor
+            resetStyle()
             if let monitor = eventMonitor {
                 NSEvent.removeMonitor(monitor)
                 eventMonitor = nil
             }
+        }
+        
+        private func resetStyle() {
+            textField?.textColor = .labelColor
+            containerView?.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+            containerView?.layer?.borderColor = NSColor.secondaryLabelColor.withAlphaComponent(0.2).cgColor
         }
         
         private func updateTextFieldDisplay() {

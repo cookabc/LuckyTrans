@@ -1,71 +1,88 @@
 import SwiftUI
 import ApplicationServices
 
-// 设置页面枚举
-enum SettingsPage: String, CaseIterable, Identifiable {
-    case general
-    case apiModels
+struct SettingsView: View {
+    @EnvironmentObject var settingsManager: SettingsManager
     
-    var id: String { rawValue }
-    
-    var title: String {
-        switch self {
-        case .general: return "常规"
-        case .apiModels: return "API 与模型"
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 30) {
+                // General Section
+                GeneralSettingsView()
+                
+                // API Section
+                APIModelsSettingsView()
+            }
+            .padding(30)
         }
-    }
-    
-    var icon: String {
-        switch self {
-            case .general: return "gearshape"
-            case .apiModels: return "globe"
-        }
+        .frame(minWidth: 500, minHeight: 600)
+        .background(Color(NSColor.windowBackgroundColor))
     }
 }
 
-struct SettingsView: View {
-    @EnvironmentObject var settingsManager: SettingsManager
-    @State private var selectedPage: SettingsPage = .apiModels
+
+// 通用设置行组件
+struct SettingsRow<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let content: Content
+    
+    init(_ title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.content = content()
+    }
+    
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.body)
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            content
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
+// 自定义主题选择器，确保宽度一致
+struct CustomAppearancePicker: View {
+    @Binding var selection: SettingsManager.AppearanceMode
     
     var body: some View {
         HStack(spacing: 0) {
-            SettingsSidebar(selectedPage: $selectedPage)
-                .frame(width: 200)
-                .background(Color(NSColor.controlBackgroundColor))
-            Divider()
-            Group {
-                switch selectedPage {
-                case .general:
-                    GeneralSettingsView()
-                case .apiModels:
-                    APIModelsSettingsView()
+            ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
+                Button(action: { selection = mode }) {
+                    Text(mode.displayName)
+                        .font(.system(size: 13))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(selection == mode ? Color.accentColor : Color.clear)
+                        .foregroundColor(selection == mode ? .white : .primary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                
+                if mode != SettingsManager.AppearanceMode.allCases.last {
+                    Divider()
+                        .frame(height: 16)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 700, minHeight: 500)
-    }
-}
-
-// 侧边栏组件
-struct SettingsSidebar: View {
-    @Binding var selectedPage: SettingsPage
-    
-    var body: some View {
-        List(selection: $selectedPage) {
-            ForEach(SettingsPage.allCases) { page in
-                Label {
-                    Text(page.title)
-                        .font(.system(size: 13, weight: .medium))
-                } icon: {
-                    Image(systemName: page.icon)
-                        .foregroundColor(.accentColor)
-                }
-                .tag(page)
-                .padding(.vertical, 4)
-            }
-        }
-        .listStyle(.sidebar)
+        .background(Color(NSColor.textBackgroundColor))
+        .cornerRadius(6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        )
+        .frame(width: 340)
     }
 }
 
@@ -73,120 +90,70 @@ struct SettingsSidebar: View {
 struct GeneralSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var hasAccessibilityPermission: Bool = false
+    
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("常规")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("应用偏好设置")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle("开机自启动", isOn: $settingsManager.launchAtLogin)
-                        Toggle("在菜单栏显示", isOn: $settingsManager.showInMenuBar)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(10)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("常规")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // 开机自启动
+                SettingsRow("开机自启动") {
+                    Toggle("", isOn: $settingsManager.launchAtLogin)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
                 }
                 
-                // 外观部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("外观", systemImage: "paintpalette")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 20) {
-                        HStack {
-                            Text("主题模式")
+                Divider()
+                
+                // 在菜单栏显示
+                SettingsRow("在菜单栏显示") {
+                    Toggle("", isOn: $settingsManager.showInMenuBar)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                
+                Divider()
+                
+                // 主题模式
+                SettingsRow("主题模式") {
+                    CustomAppearancePicker(selection: $settingsManager.appearanceMode)
+                }
+                
+                Divider()
+                
+                // 唤起按键
+                SettingsRow("唤起按键") {
+                    ShortcutRecorderView(
+                        keyCode: $settingsManager.shortcutKeyCode,
+                        modifiers: $settingsManager.shortcutModifiers
+                    )
+                    .frame(width: 340, height: 28)
+                }
+                
+                Divider()
+                
+                // 辅助功能权限
+                SettingsRow("辅助功能访问", subtitle: "用于获取选中的文本") {
+                    if hasAccessibilityPermission {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("已授权")
+                                .foregroundColor(.green)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settingsManager.appearanceMode) {
-                                ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
-                                    Text(mode.displayName).tag(mode)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(width: 200)
                         }
+                    } else {
+                        Button("授权") {
+                            openSystemSettings()
+                        }
+                        .controlSize(.small)
                     }
-                    .padding(20)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
                 }
-                
-                // 快捷键部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("全局快捷键", systemImage: "keyboard")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("唤起按键")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        HStack {
-                            ShortcutRecorderView(
-                                keyCode: $settingsManager.shortcutKeyCode,
-                                modifiers: $settingsManager.shortcutModifiers
-                            )
-                            .frame(height: 28)
-                            Spacer()
-                        }
-                    }
-                    .padding(20)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
-                
-                // 权限部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("权限", systemImage: "lock.shield")
-                        .font(.headline)
-                    
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("辅助功能访问")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text("需要此权限以便从其他应用中获取选中文本。")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        if hasAccessibilityPermission {
-                            HStack(spacing: 6) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("已授权")
-                                    .font(.subheadline)
-                                    .foregroundColor(.green)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(20)
-                        } else {
-                            Button("打开系统设置") {
-                                openSystemSettings()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
-                }
-                
-                Spacer()
             }
-            .padding(30)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(12)
         }
         .onAppear {
             checkAccessibilityPermission()
@@ -218,136 +185,115 @@ struct APIModelsSettingsView: View {
     // 生成与实际 key 长度相同的占位符
     private var placeholder: String {
         if savedKeyLength > 0 {
-            return String(repeating: "•", count: min(savedKeyLength, 20))
+            return String(repeating: "•", count: savedKeyLength)
         }
         return "••••••••••••" // 默认占位符
     }
-    
-    // 可用的模型列表
-    private let availableModels = ["GLM-4.6", "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
+
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("API 与模型")
-                    .font(.title2)
-                    .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("API 与模型")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // API 地址
+                SettingsRow("API 地址") {
+                    TextField("https://...", text: $apiEndpoint)
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(6)
+                        .frame(width: 340)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                }
                 
-                // API 配置部分
-                VStack(alignment: .leading, spacing: 16) {
-                    Label("配置", systemImage: "server.rack")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 20) {
-                        // API 端点
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("API 地址")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            TextField("https://api.example.com/v1", text: $apiEndpoint)
+                Divider()
+                
+                // API 密钥
+                SettingsRow("API 密钥") {
+                    HStack(spacing: 0) {
+                        if showAPIKey {
+                            TextField("sk-...", text: $apiKey)
                                 .textFieldStyle(.plain)
-                                .padding(10)
-                                .background(Color(NSColor.textBackgroundColor))
-                                .cornerRadius(6)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                                )
+                                .padding(6)
+                        } else {
+                            SecureField("sk-...", text: Binding(
+                                get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
+                                set: { apiKey = $0 }
+                            ))
+                            .textFieldStyle(.plain)
+                            .padding(6)
                         }
                         
-                        // API Key
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("API 密钥")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            HStack(spacing: 0) {
-                                if showAPIKey {
-                                    TextField("sk-...", text: $apiKey)
-                                        .textFieldStyle(.plain)
-                                        .padding(10)
-                                } else {
-                                    SecureField("sk-...", text: Binding(
-                                        get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
-                                        set: { apiKey = $0 }
-                                    ))
-                                    .textFieldStyle(.plain)
-                                    .padding(10)
-                                }
-                                
-                                Button(action: {
-                                    if !showAPIKey {
-                                        // 点击"显示"时，加载真实的 key
-                                        if apiKey.isEmpty || apiKey == placeholder {
-                                            if let savedKey = settingsManager.getAPIKey() {
-                                                apiKey = savedKey
-                                            }
-                                        }
-                                    } else {
-                                        // 点击"隐藏"时，如果已保存，恢复占位符
-                                        if hasSavedKey {
-                                            apiKey = "" // Clear to show placeholder in get binding
-                                        }
+                        Button(action: {
+                            if !showAPIKey {
+                                // 点击"显示"时，加载真实的 key
+                                if apiKey.isEmpty || apiKey == placeholder {
+                                    if let savedKey = settingsManager.getAPIKey() {
+                                        apiKey = savedKey
                                     }
-                                    showAPIKey.toggle()
-                                }) {
-                                    Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                        .foregroundColor(.secondary)
-                                        .padding(.horizontal, 10)
                                 }
-                                .buttonStyle(.plain)
+                            } else {
+                                // 点击"隐藏"时，如果已保存，恢复占位符
+                                if hasSavedKey {
+                                    apiKey = "" 
+                                }
                             }
-                            .background(Color(NSColor.textBackgroundColor))
-                            .cornerRadius(6)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                            )
-                        }
-                        
-                        // 模型名称
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("模型名称")
-                                .font(.subheadline)
+                            showAPIKey.toggle()
+                        }) {
+                            Image(systemName: showAPIKey ? "eye.slash" : "eye")
                                 .foregroundColor(.secondary)
-                            
-                            Picker("", selection: $modelName) {
-                                ForEach(availableModels, id: \.self) { model in
-                                    Text(model).tag(model)
-                                }
-                            }
-                            .labelsHidden()
-                            .frame(maxWidth: 200)
+                                .padding(.horizontal, 6)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(20)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(12)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(6)
+                    .frame(width: 340)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
                 }
                 
+                Divider()
                 
-                
-                // 保存按钮
-                HStack {
-                    Spacer()
-                    Button(action: saveAllSettings) {
-                        Text("保存更改")
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .tint(.accentColor)
+                // 模型名称
+                SettingsRow("模型名称") {
+                    TextField("gpt-3.5-turbo", text: $modelName)
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                        .background(Color(NSColor.textBackgroundColor))
+                        .cornerRadius(6)
+                        .frame(width: 340)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
                 }
-                .padding(.top, 10)
-                
-                Spacer()
             }
-            .padding(30)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(12)
+            
+            // 保存按钮
+            HStack {
+                Spacer()
+                Button(action: saveAllSettings) {
+                    Text("保存更改")
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.accentColor)
+            }
         }
-        .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             apiEndpoint = settingsManager.apiEndpoint
             modelName = settingsManager.modelName
@@ -385,5 +331,3 @@ struct APIModelsSettingsView: View {
         alert.runModal()
     }
 }
-
-// 已将外观与快捷键设置合并至“常规”页面
