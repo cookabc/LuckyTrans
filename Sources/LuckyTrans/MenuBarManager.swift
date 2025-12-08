@@ -67,13 +67,15 @@ class MenuBarManager: NSObject {
         screenshotOCRItem.target = self
         menu.addItem(screenshotOCRItem)
         
-        let silentOCRItem = NSMenuItem(title: "静默截图 OCR", action: nil, keyEquivalent: "c")
+        let silentOCRItem = NSMenuItem(title: "静默截图 OCR", action: #selector(handleSilentScreenshotOCR), keyEquivalent: "c")
         silentOCRItem.keyEquivalentModifierMask = [.option]
         silentOCRItem.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: nil)
+        silentOCRItem.target = self
         menu.addItem(silentOCRItem)
         
-        let finderOCRItem = NSMenuItem(title: "访达选图 OCR", action: nil, keyEquivalent: "")
+        let finderOCRItem = NSMenuItem(title: "访达选图 OCR", action: #selector(handleFinderOCR), keyEquivalent: "")
         finderOCRItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        finderOCRItem.target = self
         menu.addItem(finderOCRItem)
         
         let clipboardOCRItem = NSMenuItem(title: "剪贴板 OCR", action: #selector(handleClipboardOCR), keyEquivalent: "")
@@ -225,6 +227,52 @@ class MenuBarManager: NSObject {
         } else {
             showError("剪贴板不包含图片")
         }
+    }
+
+    @objc private func handleSilentScreenshotOCR() {
+        presentSelectionOverlay { [weak self] rect in
+            guard let self = self, let rect = rect else { return }
+            guard let image = CGWindowListCreateImage(rect, .optionOnScreenOnly, kCGNullWindowID, .bestResolution) else { return }
+            let text = self.recognizeText(from: image).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        }
+    }
+
+    @objc private func handleFinderOCR() {
+        let script = """
+        tell application "Finder"
+            set theSelection to selection
+            if (count of theSelection) = 0 then
+                return ""
+            end if
+            set theItem to item 1 of theSelection as alias
+            POSIX path of theItem
+        end tell
+        """
+        if let text = runAppleScript(script), !text.isEmpty {
+            let url = URL(fileURLWithPath: text)
+            if let image = NSImage(contentsOf: url), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                let result = recognizeText(from: cgImage).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !result.isEmpty else { return }
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(result, forType: .string)
+                NotificationCenter.default.post(name: NSNotification.Name("UpdateSelectedText"), object: nil, userInfo: ["text": result])
+                MainWindowManager.shared.showMainWindow()
+            }
+        }
+    }
+
+    private func runAppleScript(_ source: String) -> String? {
+        let appleScript = NSAppleScript(source: source)
+        var error: NSDictionary?
+        let output = appleScript?.executeAndReturnError(&error)
+        if let e = error {
+            print("AppleScript error: \(e)")
+            return nil
+        }
+        return output?.stringValue
     }
 
     private func presentSelectionOverlay(completion: @escaping (CGRect?) -> Void) {

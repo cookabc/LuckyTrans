@@ -68,6 +68,19 @@ class FloatingTranslationWindow: NSWindow {
             hostingView?.rootView = translationView
         }
         
+        // 将窗口定位到鼠标附近
+        if let screen = NSScreen.main {
+            let mouse = NSEvent.mouseLocation
+            let screenRect = screen.visibleFrame
+            let windowWidth: CGFloat = 450
+            let windowHeight: CGFloat = 300
+            var x = mouse.x - windowWidth / 2
+            var y = mouse.y - windowHeight - 16
+            // 边界限制
+            x = max(screenRect.minX + 8, min(x, screenRect.maxX - windowWidth - 8))
+            y = max(screenRect.minY + 8, min(y, screenRect.maxY - windowHeight - 8))
+            setFrame(NSRect(x: x, y: y, width: windowWidth, height: windowHeight), display: true)
+        }
         makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
