@@ -61,9 +61,10 @@ class MenuBarManager: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         // OCR Items (Placeholders)
-        let screenshotOCRItem = NSMenuItem(title: "截图 OCR", action: nil, keyEquivalent: "s")
+        let screenshotOCRItem = NSMenuItem(title: "截图 OCR", action: #selector(handleScreenshotOCR), keyEquivalent: "s")
         screenshotOCRItem.keyEquivalentModifierMask = [.option, .shift]
         screenshotOCRItem.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+        screenshotOCRItem.target = self
         menu.addItem(screenshotOCRItem)
         
         let silentOCRItem = NSMenuItem(title: "静默截图 OCR", action: nil, keyEquivalent: "c")
@@ -75,8 +76,9 @@ class MenuBarManager: NSObject {
         finderOCRItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
         menu.addItem(finderOCRItem)
         
-        let clipboardOCRItem = NSMenuItem(title: "剪贴板 OCR", action: nil, keyEquivalent: "")
+        let clipboardOCRItem = NSMenuItem(title: "剪贴板 OCR", action: #selector(handleClipboardOCR), keyEquivalent: "")
         clipboardOCRItem.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
+        clipboardOCRItem.target = self
         menu.addItem(clipboardOCRItem)
         
         let showOCRWindowItem = NSMenuItem(title: "显示 OCR 窗口", action: nil, keyEquivalent: "")
@@ -190,6 +192,39 @@ class MenuBarManager: NSObject {
             NSStatusBar.system.removeStatusItem(item)
         }
         statusItem = nil
+    }
+
+    @objc private func handleScreenshotOCR() {
+        presentSelectionOverlay { [weak self] rect in
+            guard let self = self, let rect = rect else { return }
+            guard let image = CGWindowListCreateImage(rect, .optionOnScreenOnly, kCGNullWindowID, .bestResolution) else {
+                self.showError("无法截取屏幕，请在系统设置中授予屏幕录制权限")
+                return
+            }
+            let text = self.recognizeText(from: image).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                self.showError("未识别到文字")
+                return
+            }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            NotificationCenter.default.post(name: NSNotification.Name("UpdateSelectedText"), object: nil, userInfo: ["text": text])
+            MainWindowManager.shared.showMainWindow()
+        }
+    }
+
+    @objc private func handleClipboardOCR() {
+        let pasteboard = NSPasteboard.general
+        if let data = pasteboard.data(forType: .tiff), let image = NSImage(data: data), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            let text = recognizeText(from: cgImage).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { showError("剪贴板图片未识别到文字"); return }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            NotificationCenter.default.post(name: NSNotification.Name("UpdateSelectedText"), object: nil, userInfo: ["text": text])
+            MainWindowManager.shared.showMainWindow()
+        } else {
+            showError("剪贴板不包含图片")
+        }
     }
 
     private func presentSelectionOverlay(completion: @escaping (CGRect?) -> Void) {
