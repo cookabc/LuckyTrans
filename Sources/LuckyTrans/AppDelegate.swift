@@ -40,6 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         shortcutManager?.unregister()
         translationWindow?.close()
         translationWindow = nil
+        shortcutManager = nil
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
