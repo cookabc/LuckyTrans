@@ -115,7 +115,6 @@ class FloatingTranslationWindow: NSWindow {
         autoCloseTask = nil
 
         // 清理 hostingView
-        hostingView?.rootView = nil
         hostingView = nil
 
         super.close()
