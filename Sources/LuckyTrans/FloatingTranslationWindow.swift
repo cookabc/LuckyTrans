@@ -9,10 +9,11 @@ enum TranslationWindowState {
 
 class FloatingTranslationWindow: NSWindow {
     private var hostingView: NSHostingView<TranslationView>?
-    
+    private var autoCloseTask: DispatchWorkItem?
+
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: [.borderless], backing: backingStoreType, defer: flag)
-        
+
         setupWindow()
     }
     
@@ -54,20 +55,23 @@ class FloatingTranslationWindow: NSWindow {
     }
     
     func show(with state: TranslationWindowState) {
+        // 取消之前的自动关闭任务
+        autoCloseTask?.cancel()
+
         // 确保应用当前主题设置
         applyAppearance()
-        
-        let translationView = TranslationView(state: state) {
-            self.close()
+
+        let translationView = TranslationView(state: state) { [weak self] in
+            self?.closeWithAnimation()
         }
-        
+
         if hostingView == nil {
             hostingView = NSHostingView(rootView: translationView)
             contentView = hostingView
         } else {
             hostingView?.rootView = translationView
         }
-        
+
         // 将窗口定位到鼠标附近
         if let screen = NSScreen.main {
             let mouse = NSEvent.mouseLocation
@@ -83,30 +87,37 @@ class FloatingTranslationWindow: NSWindow {
         }
         makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        
+
         // 淡入动画
         alphaValue = 0
         animator().alphaValue = 1.0
-        
+
         // 自动关闭（成功时，延迟 30 秒，给用户更多时间阅读）
         if case .success = state {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
-                // 如果窗口可见且未被用户交互（简单判断），则关闭
-                // 这里为了简单，总是尝试关闭，实际应该检测鼠标位置
-                // self.closeWithAnimation() 
-                // 用户反馈希望手动关闭或点击外部关闭，暂时不自动关闭以免打断阅读
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.closeWithAnimation()
             }
+            autoCloseTask = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: workItem)
         }
     }
     
     func closeWithAnimation() {
         animator().alphaValue = 0
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.close()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.close()
         }
     }
-    
+
     override func close() {
+        // 取消自动关闭任务
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+
+        // 清理 hostingView
+        hostingView?.rootView = nil
+        hostingView = nil
+
         super.close()
     }
     
