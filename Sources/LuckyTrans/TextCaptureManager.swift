@@ -186,42 +186,8 @@ class TextCaptureManager {
     }
     
     private func getSelectedTextViaClipboard() -> String? {
-        print("TextCapture: 尝试使用剪贴板方法获取选中文本")
-        
-        // 保存当前剪贴板内容
-        let pasteboard = NSPasteboard.general
-        let previousContents = pasteboard.string(forType: .string)
-        
-        // 模拟 Cmd+C
-        let source = CGEventSource(stateID: .hidSystemState)
-        let keyCode: CGKeyCode = 0x08 // 'C' key
-        let keyDownEvent = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
-        let keyUpEvent = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
-        
-        keyDownEvent?.flags = .maskCommand
-        keyUpEvent?.flags = .maskCommand
-        
-        keyDownEvent?.post(tap: .cghidEventTap)
-        keyUpEvent?.post(tap: .cghidEventTap)
-        
-        // 等待剪贴板更新（增加等待时间）
-        Thread.sleep(forTimeInterval: 0.2)
-        
-        // 获取新内容
-        let newContents = pasteboard.string(forType: .string)
-        
-        // 恢复原剪贴板内容
-        if let previous = previousContents {
-            pasteboard.clearContents()
-            pasteboard.setString(previous, forType: .string)
-        }
-        
-        if let contents = newContents, !contents.isEmpty {
-            print("TextCapture: 从剪贴板获取到文本: \(contents.prefix(50))")
-            return contents
-        }
-        
-        print("TextCapture: 剪贴板方法也失败")
+        print("TextCapture: 剪贴板方法已禁用，因其可能干扰用户操作")
+        // 剪贴板方法会干扰用户的正常工作流程，不再使用
         return nil
     }
 }
