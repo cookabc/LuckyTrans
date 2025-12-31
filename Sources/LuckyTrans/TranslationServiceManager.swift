@@ -100,9 +100,12 @@ class TranslationServiceManager: ObservableObject {
         // Google 服务
         services[.google] = GoogleTranslationService()
 
+        // DeepL 服务
+        services[.deepL] = DeepLTranslationService()
+
         // 其他服务可以在这里添加
-        // services[.deepL] = DeepLTranslationService()
         // services[.baidu] = BaiduTranslationService()
+        // services[.youdao] = YoudaoTranslationService()
     }
 
     /// 创建服务实例
@@ -112,7 +115,9 @@ class TranslationServiceManager: ObservableObject {
             return OpenAIServiceAdapter()
         case .google:
             return GoogleTranslationService()
-        case .deepL, .baidu, .youdao:
+        case .deepL:
+            return DeepLTranslationService()
+        case .baidu, .youdao:
             // 暂未实现
             return UnimplementedService(type: type)
         }

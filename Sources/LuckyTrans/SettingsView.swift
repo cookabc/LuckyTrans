@@ -179,13 +179,16 @@ struct GeneralSettingsView: View {
 // API & Models 设置页面
 struct APIModelsSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @StateObject private var serviceManager = TranslationServiceManager.shared
     @State private var apiKey: String = ""
     @State private var showAPIKey: Bool = false
     @State private var apiEndpoint: String = Config.defaultAPIEndpoint
     @State private var modelName: String = Config.defaultModelName
     @State private var hasSavedKey: Bool = false
     @State private var savedKeyLength: Int = 0
-    
+    @State private var deepLApiKey: String = ""
+    @State private var showDeepLKey: Bool = false
+
     // 生成与实际 key 长度相同的占位符
     private var placeholder: String {
         if savedKeyLength > 0 {
@@ -194,96 +197,49 @@ struct APIModelsSettingsView: View {
         return "••••••••••••" // 默认占位符
     }
 
+    private var deepLPlaceholder: String {
+        if let key = UserDefaults.standard.string(forKey: "deepl_apiKey"), !key.isEmpty {
+            return String(repeating: "•", count: key.count)
+        }
+        return "••••••••••••"
+    }
+
+    private var isCurrentServiceOpenAI: Bool {
+        serviceManager.currentServiceType == .openAI
+    }
+
+    private var isCurrentServiceDeepL: Bool {
+        serviceManager.currentServiceType == .deepL
+    }
+
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("API 与模型")
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             VStack(alignment: .leading, spacing: 0) {
-                // API 地址
-                SettingsRow("API 地址") {
-                    TextField("https://...", text: $apiEndpoint)
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(6)
-                        .frame(width: 340)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
+                // 根据当前服务显示不同的配置项
+
+                // OpenAI 配置
+                if isCurrentServiceOpenAI {
+                    openAIConfigSection
                 }
-                
-                Divider()
-                
-                // API 密钥
-                SettingsRow("API 密钥") {
-                    HStack(spacing: 0) {
-                        if showAPIKey {
-                            TextField("sk-...", text: $apiKey)
-                                .textFieldStyle(.plain)
-                                .padding(6)
-                        } else {
-                            SecureField("sk-...", text: Binding(
-                                get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
-                                set: { apiKey = $0 }
-                            ))
-                            .textFieldStyle(.plain)
-                            .padding(6)
-                        }
-                        
-                        Button(action: {
-                            if !showAPIKey {
-                                // 点击"显示"时，加载真实的 key
-                                if apiKey.isEmpty || apiKey == placeholder {
-                                    if let savedKey = settingsManager.getAPIKey() {
-                                        apiKey = savedKey
-                                    }
-                                }
-                            } else {
-                                // 点击"隐藏"时，如果已保存，恢复占位符
-                                if hasSavedKey {
-                                    apiKey = "" 
-                                }
-                            }
-                            showAPIKey.toggle()
-                        }) {
-                            Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                .foregroundColor(.secondary)
-                                .padding(.horizontal, 6)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    .frame(width: 340)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
+
+                // DeepL 配置
+                if isCurrentServiceDeepL {
+                    deepLConfigSection
                 }
-                
-                Divider()
-                
-                // 模型名称
-                SettingsRow("模型名称") {
-                    TextField("gpt-3.5-turbo", text: $modelName)
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(6)
-                        .frame(width: 340)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
+
+                // Google 配置（无需配置）
+                if serviceManager.currentServiceType == .google {
+                    googleConfigSection
                 }
             }
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(12)
-            
+
             // 保存按钮
             HStack {
                 Spacer()
@@ -305,17 +261,199 @@ struct APIModelsSettingsView: View {
             // 如果有已保存的 key，获取其长度并设置占位符
             if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
                 savedKeyLength = savedKey.count
-                // apiKey 初始为空，由 Binding 处理显示 placeholder
+            }
+        }
+        .onChange(of: serviceManager.currentServiceType) { _ in
+            // 切换服务时刷新状态
+            hasSavedKey = settingsManager.hasAPIKey()
+            if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
+                savedKeyLength = savedKey.count
             }
         }
     }
+
+    // MARK: - Service Config Sections
+
+    private var openAIConfigSection: some View {
+        Group {
+            // API 地址
+            SettingsRow("API 地址") {
+                TextField("https://...", text: $apiEndpoint)
+                    .textFieldStyle(.plain)
+                    .padding(6)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(6)
+                    .frame(width: 340)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+            }
+
+            Divider()
+
+            // API 密钥
+            SettingsRow("API 密钥") {
+                apiKeyField
+            }
+
+            Divider()
+
+            // 模型名称
+            SettingsRow("模型名称") {
+                TextField("gpt-3.5-turbo", text: $modelName)
+                    .textFieldStyle(.plain)
+                    .padding(6)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(6)
+                    .frame(width: 340)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+            }
+        }
+    }
+
+    private var deepLConfigSection: some View {
+        Group {
+            // DeepL API 密钥
+            SettingsRow("DeepL API Key", subtitle: "可在 DeepL 网站免费获取") {
+                HStack(spacing: 0) {
+                    if showDeepLKey {
+                        TextField("DeepL API Key", text: $deepLApiKey)
+                            .textFieldStyle(.plain)
+                            .padding(6)
+                    } else {
+                        SecureField("DeepL API Key", text: Binding(
+                            get: { deepLApiKey.isEmpty ? deepLPlaceholder : deepLApiKey },
+                            set: { deepLApiKey = $0 }
+                        ))
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                    }
+
+                    Button(action: {
+                        if !showDeepLKey && deepLApiKey.isEmpty {
+                            if let savedKey = UserDefaults.standard.string(forKey: "deepl_apiKey") {
+                                deepLApiKey = savedKey
+                            }
+                        }
+                        showDeepLKey.toggle()
+                    }) {
+                        Image(systemName: showDeepLKey ? "eye.slash" : "eye")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(6)
+                .frame(width: 340)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+            }
+
+            Divider()
+
+            // 说明文字
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.secondary)
+                    Text("使用说明")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• 访问 https://www.deepl.com/pro-api 免费注册")
+                    Text("• 创建 API Key 后在此配置")
+                    Text("• 免费版每月可翻译 50 万字符")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.leading, 20)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private var googleConfigSection: some View {
+        Group {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Google 翻译无需配置")
+                        .font(.subheadline)
+                }
+                Text("Google 翻译是免费服务，无需 API Key 即可使用")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 24)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    // MARK: - Helper Views
+
+    private var apiKeyField: some View {
+        HStack(spacing: 0) {
+            if showAPIKey {
+                TextField("sk-...", text: $apiKey)
+                    .textFieldStyle(.plain)
+                    .padding(6)
+            } else {
+                SecureField("sk-...", text: Binding(
+                    get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
+                    set: { apiKey = $0 }
+                ))
+                .textFieldStyle(.plain)
+                .padding(6)
+            }
+
+            Button(action: {
+                if !showAPIKey {
+                    // 点击"显示"时，加载真实的 key
+                    if apiKey.isEmpty || apiKey == placeholder {
+                        if let savedKey = settingsManager.getAPIKey() {
+                            apiKey = savedKey
+                        }
+                    }
+                } else {
+                    // 点击"隐藏"时，如果已保存，恢复占位符
+                    if hasSavedKey {
+                        apiKey = ""
+                    }
+                }
+                showAPIKey.toggle()
+            }) {
+                Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color(NSColor.textBackgroundColor))
+        .cornerRadius(6)
+        .frame(width: 340)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        )
+    }
     
     private func saveAllSettings() {
-        // 保存所有设置
+        // 保存 OpenAI 设置
         settingsManager.apiEndpoint = apiEndpoint
         settingsManager.modelName = modelName
 
-        // 保存 API Key（如果输入框有内容且不是占位符）
+        // 保存 OpenAI API Key
         if !apiKey.isEmpty && apiKey != placeholder {
             if settingsManager.saveAPIKey(apiKey) {
                 hasSavedKey = true
@@ -325,6 +463,11 @@ struct APIModelsSettingsView: View {
                     apiKey = placeholder
                 }
             }
+        }
+
+        // 保存 DeepL API Key
+        if !deepLApiKey.isEmpty && deepLApiKey != deepLPlaceholder {
+            UserDefaults.standard.set(deepLApiKey, forKey: "deepl_apiKey")
         }
 
         // 显示成功提示
