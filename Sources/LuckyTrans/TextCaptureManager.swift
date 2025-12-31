@@ -7,11 +7,20 @@ class TextCaptureManager {
     private init() {}
     
     func getSelectedText() -> String? {
+        // 方法 0: 检查是否为浏览器，优先使用 AppleScript
+        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           isBrowser(bundleID) {
+            if let text = getSelectedTextFromBrowser(bundleID) {
+                print("TextCapture: 从浏览器 AppleScript 获取到文本: \(text.prefix(50))")
+                return text
+            }
+        }
+
         // 方法 1: 使用辅助功能 API 获取选中文本
         if let text = getSelectedTextViaAccessibility() {
             return text
         }
-        
+
         // 方法 2: 使用剪贴板作为备选方案
         return getSelectedTextViaClipboard()
     }

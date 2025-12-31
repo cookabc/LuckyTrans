@@ -297,19 +297,32 @@ class MenuBarManager: NSObject {
     }
 
     private func recognizeText(from image: CGImage) -> String {
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        do {
-            try handler.perform([request])
-            let observations = request.results as? [VNRecognizedTextObservation] ?? []
-            let lines = observations.compactMap { $0.topCandidates(1).first?.string }
-            return lines.joined(separator: "\n")
-        } catch {
-            return ""
+        // 使用 SimpleOCREngine 进行 OCR
+        let nsImage = NSImage(cgImage: image, size: .zero)
+
+        // 同步调用异步方法（为了兼容现有代码）
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: String = ""
+
+        Task {
+            do {
+                let ocrResult = try await SimpleOCREngine.shared.recognizeText(from: nsImage)
+                result = ocrResult.mergedText
+            } catch {
+                print("OCR Error: \(error.localizedDescription)")
+                result = ""
+            }
+            semaphore.signal()
         }
+
+        _ = semaphore.wait(timeout: .now() + 10) // 10秒超时
+        return result
+    }
+
+    /// 异步版本的 OCR 方法，用于获取完整的 OCR 结果
+    private func recognizeTextAsync(from image: CGImage) async throws -> OCRResult {
+        let nsImage = NSImage(cgImage: image, size: .zero)
+        return try await SimpleOCREngine.shared.recognizeText(from: nsImage)
     }
 
     private func showError(_ message: String) {
