@@ -6,7 +6,9 @@
       "mcp__zread__search_doc",
       "Bash(swift build:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(swift test:*)"
     ],
     "additionalDirectories": [
       "/Users/advance/Documents/"
