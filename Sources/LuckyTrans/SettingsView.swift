@@ -3,13 +3,17 @@ import ApplicationServices
 
 struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
-    
+    @StateObject private var serviceManager = TranslationServiceManager.shared
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 // General Section
                 GeneralSettingsView()
-                
+
+                // Translation Service Section
+                TranslationServiceSettingsView()
+
                 // API Section
                 APIModelsSettingsView()
             }
@@ -310,7 +314,7 @@ struct APIModelsSettingsView: View {
         // 保存所有设置
         settingsManager.apiEndpoint = apiEndpoint
         settingsManager.modelName = modelName
-        
+
         // 保存 API Key（如果输入框有内容且不是占位符）
         if !apiKey.isEmpty && apiKey != placeholder {
             if settingsManager.saveAPIKey(apiKey) {
@@ -322,12 +326,72 @@ struct APIModelsSettingsView: View {
                 }
             }
         }
-        
+
         // 显示成功提示
         let alert = NSAlert()
         alert.messageText = "保存成功"
         alert.informativeText = "所有设置已保存"
         alert.alertStyle = .informational
         alert.runModal()
+    }
+}
+
+// MARK: - Translation Service Settings
+
+struct TranslationServiceSettingsView: View {
+    @StateObject private var serviceManager = TranslationServiceManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("翻译服务")
+                .font(.title2)
+                .fontWeight(.bold)
+
+            VStack(alignment: .leading, spacing: 0) {
+                // 服务选择
+                SettingsRow("翻译服务", subtitle: "选择用于翻译的服务提供商") {
+                    Picker("", selection: $serviceManager.currentServiceType) {
+                        ForEach(TranslationServiceType.allCases) { type in
+                            HStack {
+                                Text(type.displayName)
+                                if serviceManager.getServiceStatus(type) == "已配置" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                }
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 200)
+                }
+
+                Divider()
+
+                // 服务描述
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.secondary)
+                        Text("服务说明")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Text(currentServiceDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 20)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(12)
+        }
+    }
+
+    private var currentServiceDescription: String {
+        serviceManager.getService(for: serviceManager.currentServiceType).serviceDescription
     }
 }
