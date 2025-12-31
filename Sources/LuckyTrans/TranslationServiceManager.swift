@@ -103,8 +103,10 @@ class TranslationServiceManager: ObservableObject {
         // DeepL 服务
         services[.deepL] = DeepLTranslationService()
 
+        // 百度服务
+        services[.baidu] = BaiduTranslationService()
+
         // 其他服务可以在这里添加
-        // services[.baidu] = BaiduTranslationService()
         // services[.youdao] = YoudaoTranslationService()
     }
 
@@ -117,7 +119,9 @@ class TranslationServiceManager: ObservableObject {
             return GoogleTranslationService()
         case .deepL:
             return DeepLTranslationService()
-        case .baidu, .youdao:
+        case .baidu:
+            return BaiduTranslationService()
+        case .youdao:
             // 暂未实现
             return UnimplementedService(type: type)
         }
