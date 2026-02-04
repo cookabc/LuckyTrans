@@ -758,7 +758,7 @@ struct AboutSettingsView: View {
             
             // Links
             HStack(spacing: LTDesign.Spacing.xl) {
-                Link(destination: URL(string: "https://github.com/example/luckytrans")!) {
+                Link(destination: URL(string: "https://github.com/cookabc/LuckyTrans")!) {
                     Label("GitHub", systemImage: "link")
                         .font(LTDesign.Typography.caption)
                 }
