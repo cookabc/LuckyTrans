@@ -17,8 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 配置快捷键处理器
         setupShortcuts()
         
-        // 初始化菜单栏
-        MenuBarManager.shared.setup()
+
         
         // 监听来自菜单栏的触发通知
         NotificationCenter.default.addObserver(
