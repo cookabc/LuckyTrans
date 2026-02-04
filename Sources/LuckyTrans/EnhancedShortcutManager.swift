@@ -248,4 +248,14 @@ enum ValidationResult {
     }
 }
 
+extension FourCharCode {
+    init(fromString string: String) {
+        var result: FourCharCode = 0
+        for (index, char) in string.utf8.prefix(4).enumerated() {
+            result |= FourCharCode(char) << (8 * (3 - index))
+        }
+        self = result
+    }
+}
+
 

@@ -31,20 +31,6 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    @Published var shortcutKeyCode: UInt32 {
-        didSet {
-            UserDefaults.standard.set(Int(shortcutKeyCode), forKey: "shortcutKeyCode")
-            updateShortcut()
-        }
-    }
-    
-    @Published var shortcutModifiers: UInt32 {
-        didSet {
-            UserDefaults.standard.set(Int(shortcutModifiers), forKey: "shortcutModifiers")
-            updateShortcut()
-        }
-    }
-
     // 常规设置
     @Published var launchAtLogin: Bool {
         didSet {
@@ -101,18 +87,6 @@ class SettingsManager: ObservableObject {
         let savedTranslationMode = UserDefaults.standard.string(forKey: "translationMode") ?? "standard"
         self.translationMode = TranslationMode(rawValue: savedTranslationMode) ?? .standard
         
-        // 加载快捷键设置
-        let savedKeyCode = UserDefaults.standard.integer(forKey: "shortcutKeyCode")
-        let savedModifiers = UserDefaults.standard.integer(forKey: "shortcutModifiers")
-        
-        if savedKeyCode > 0 && savedModifiers > 0 {
-            self.shortcutKeyCode = UInt32(savedKeyCode)
-            self.shortcutModifiers = UInt32(savedModifiers)
-        } else {
-            // 默认快捷键：Cmd + T
-            self.shortcutKeyCode = 0x11 // 'T' key
-            self.shortcutModifiers = UInt32(cmdKey)
-        }
         // 加载常规设置
         self.launchAtLogin = UserDefaults.standard.bool(forKey: "launchAtLogin")
         self.showInMenuBar = UserDefaults.standard.object(forKey: "showInMenuBar") as? Bool ?? true
@@ -126,11 +100,6 @@ class SettingsManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(translationMode.rawValue, forKey: "translationMode")
         }
-    }
-    
-    private func updateShortcut() {
-        // 通知 ShortcutManager 更新快捷键
-        NotificationCenter.default.post(name: NSNotification.Name("ShortcutDidChange"), object: nil)
     }
     
     private func applyAppearance() {
