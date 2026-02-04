@@ -2,65 +2,143 @@ import AppKit
 import SwiftUI
 import Vision
 
+// MARK: - Menu Bar Status
+
+enum MenuBarStatus {
+    case normal
+    case translating
+    case error
+    
+    var iconName: String {
+        switch self {
+        case .normal: return "globe"
+        case .translating: return "arrow.triangle.2.circlepath"
+        case .error: return "exclamationmark.triangle"
+        }
+    }
+}
+
 class MenuBarManager: NSObject {
     static let shared = MenuBarManager()
     
     private var statusItem: NSStatusItem?
     private var overlayWindow: NSWindow?
     private var floatingWindow: FloatingTranslationWindow?
+    private var rotationTimer: Timer?
+    private var currentStatus: MenuBarStatus = .normal
     
     override private init() {}
     
     func setup() {
+        // Prevent duplicate setup
+        if statusItem != nil { return }
+        
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "LuckyTrans")
+            button.image = NSImage(systemSymbolName: MenuBarStatus.normal.iconName, accessibilityDescription: "LuckyTrans")
+            button.image?.isTemplate = true
         }
         
         updateMenu()
+    }
+    
+    // MARK: - Status Icon Management
+    
+    func setStatus(_ status: MenuBarStatus) {
+        guard status != currentStatus else { return }
+        currentStatus = status
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let button = self.statusItem?.button else { return }
+            
+            // Stop any existing animation
+            self.stopRotationAnimation()
+            
+            // Update icon
+            button.image = NSImage(systemSymbolName: status.iconName, accessibilityDescription: "LuckyTrans")
+            button.image?.isTemplate = true
+            
+            // Apply status-specific styling
+            switch status {
+            case .translating:
+                self.startRotationAnimation()
+            case .error:
+                button.contentTintColor = .systemRed
+                // Auto-reset to normal after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                    if self?.currentStatus == .error {
+                        self?.setStatus(.normal)
+                    }
+                }
+            case .normal:
+                button.contentTintColor = nil
+            }
+        }
+    }
+    
+    private func startRotationAnimation() {
+        rotationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let button = self?.statusItem?.button else { return }
+            // Rotate the icon by changing its drawing
+            if let image = button.image {
+                let rotated = image.rotated(by: 30)
+                button.image = rotated
+            }
+        }
+    }
+    
+    private func stopRotationAnimation() {
+        rotationTimer?.invalidate()
+        rotationTimer = nil
     }
     
     private func updateMenu() {
         let menu = NSMenu()
         menu.autoenablesItems = false
         
-        // 划词翻译 (Selection Translate)
+        // MARK: Brand Header
+        let headerItem = NSMenuItem()
+        let headerView = NSHostingView(rootView: MenuBarHeaderView())
+        headerView.frame = NSRect(x: 0, y: 0, width: 220, height: 50)
+        headerItem.view = headerView
+        menu.addItem(headerItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // MARK: Translation Section
+        let translateSectionItem = createSectionHeader("翻译")
+        menu.addItem(translateSectionItem)
+        
         let selectionTranslateItem = NSMenuItem(title: "划词翻译", action: #selector(handleSelectionTranslate), keyEquivalent: "d")
         selectionTranslateItem.keyEquivalentModifierMask = [.option]
         selectionTranslateItem.image = NSImage(systemSymbolName: "text.magnifyingglass", accessibilityDescription: nil)
         selectionTranslateItem.target = self
         menu.addItem(selectionTranslateItem)
         
-        // 截图翻译 (Screenshot Translate)
         let screenshotTranslateItem = NSMenuItem(title: "截图翻译", action: #selector(handleScreenshotTranslate), keyEquivalent: "s")
         screenshotTranslateItem.keyEquivalentModifierMask = [.option]
         screenshotTranslateItem.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: nil)
         screenshotTranslateItem.target = self
         menu.addItem(screenshotTranslateItem)
         
-        // 输入翻译 (Input Translate)
         let inputTranslateItem = NSMenuItem(title: "输入翻译", action: #selector(handleInputTranslate), keyEquivalent: "a")
         inputTranslateItem.keyEquivalentModifierMask = [.option]
         inputTranslateItem.image = NSImage(systemSymbolName: "keyboard", accessibilityDescription: nil)
         inputTranslateItem.target = self
         menu.addItem(inputTranslateItem)
         
-        // 剪贴板翻译
         let clipboardTranslateItem = NSMenuItem(title: "剪贴板翻译", action: #selector(handleClipboardTranslate), keyEquivalent: "")
         clipboardTranslateItem.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
         clipboardTranslateItem.target = self
         menu.addItem(clipboardTranslateItem)
         
-        // 显示翻译窗口
-        let showWindowItem = NSMenuItem(title: "显示翻译窗口", action: #selector(showMainWindow), keyEquivalent: "")
-        showWindowItem.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
-        showWindowItem.target = self
-        menu.addItem(showWindowItem)
-        
         menu.addItem(NSMenuItem.separator())
         
-        // OCR Items (Placeholders)
+        // MARK: OCR Section
+        let ocrSectionItem = createSectionHeader("文字识别")
+        menu.addItem(ocrSectionItem)
+        
         let screenshotOCRItem = NSMenuItem(title: "截图 OCR", action: #selector(handleScreenshotOCR), keyEquivalent: "s")
         screenshotOCRItem.keyEquivalentModifierMask = [.option, .shift]
         screenshotOCRItem.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
@@ -73,53 +151,53 @@ class MenuBarManager: NSObject {
         silentOCRItem.target = self
         menu.addItem(silentOCRItem)
         
-        let finderOCRItem = NSMenuItem(title: "访达选图 OCR", action: #selector(handleFinderOCR), keyEquivalent: "")
-        finderOCRItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
-        finderOCRItem.target = self
-        menu.addItem(finderOCRItem)
-        
         let clipboardOCRItem = NSMenuItem(title: "剪贴板 OCR", action: #selector(handleClipboardOCR), keyEquivalent: "")
         clipboardOCRItem.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
         clipboardOCRItem.target = self
         menu.addItem(clipboardOCRItem)
         
-        let showOCRWindowItem = NSMenuItem(title: "显示 OCR 窗口", action: nil, keyEquivalent: "")
-        showOCRWindowItem.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: nil)
-        menu.addItem(showOCRWindowItem)
+        let finderOCRItem = NSMenuItem(title: "访达选图 OCR", action: #selector(handleFinderOCR), keyEquivalent: "")
+        finderOCRItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        finderOCRItem.target = self
+        menu.addItem(finderOCRItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        // Settings
-        let settingsItem = NSMenuItem(title: "偏好设置", action: #selector(showSettings), keyEquivalent: ",")
+        // MARK: Windows Section
+        let showWindowItem = NSMenuItem(title: "显示翻译窗口", action: #selector(showMainWindow), keyEquivalent: "")
+        showWindowItem.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
+        showWindowItem.target = self
+        menu.addItem(showWindowItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // MARK: Settings & Quit
+        let settingsItem = NSMenuItem(title: "偏好设置...", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.keyEquivalentModifierMask = .command
-        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
+        settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
         
-        // Version Info
-        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-            let versionItem = NSMenuItem(title: "LuckyTrans \(version)", action: nil, keyEquivalent: "")
-            versionItem.isEnabled = false
-            menu.addItem(versionItem)
-        }
-        
-        // More Submenu
-        let moreItem = NSMenuItem(title: "更多", action: nil, keyEquivalent: "")
-        moreItem.image = NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: nil)
-        let moreMenu = NSMenu()
-        moreMenu.addItem(NSMenuItem(title: "检查更新", action: nil, keyEquivalent: ""))
-        moreMenu.addItem(NSMenuItem(title: "反馈", action: nil, keyEquivalent: ""))
-        moreItem.submenu = moreMenu
-        menu.addItem(moreItem)
-        
-        // Quit
-        let quitItem = NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出 LuckyTrans", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.keyEquivalentModifierMask = .command
         quitItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
         
         statusItem?.menu = menu
+    }
+    
+    private func createSectionHeader(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title.uppercased(), action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        item.attributedTitle = NSAttributedString(
+            string: title.uppercased(),
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]
+        )
+        return item
     }
     
     // Actions
@@ -381,5 +459,32 @@ class SelectionOverlayView: NSView {
         let screenOrigin = window?.frame.origin ?? .zero
         let global = NSRect(x: rect.origin.x + screenOrigin.x, y: rect.origin.y + screenOrigin.y, width: rect.size.width, height: rect.size.height)
         onComplete?(global)
+    }
+}
+
+// MARK: - NSImage Rotation Extension
+
+extension NSImage {
+    func rotated(by degrees: CGFloat) -> NSImage {
+        let radians = degrees * .pi / 180
+        let newSize = CGSize(width: size.width, height: size.height)
+        let newImage = NSImage(size: newSize)
+        
+        newImage.lockFocus()
+        let context = NSGraphicsContext.current!
+        context.saveGraphicsState()
+        
+        let transform = NSAffineTransform()
+        transform.translateX(by: newSize.width / 2, yBy: newSize.height / 2)
+        transform.rotate(byDegrees: degrees)
+        transform.translateX(by: -size.width / 2, yBy: -size.height / 2)
+        transform.concat()
+        
+        draw(at: .zero, from: NSRect(origin: .zero, size: size), operation: .copy, fraction: 1.0)
+        
+        context.restoreGraphicsState()
+        newImage.lockFocus()
+        
+        return newImage
     }
 }

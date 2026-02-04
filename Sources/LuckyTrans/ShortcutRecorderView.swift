@@ -2,40 +2,16 @@ import SwiftUI
 import AppKit
 import Carbon
 
-// 自定义可点击的文本字段
-class ClickableTextField: NSTextField {
-    weak var coordinator: ShortcutRecorderView.Coordinator?
-    
-    override func mouseDown(with event: NSEvent) {
-        print("ClickableTextField mouseDown called")
-        // 不调用 super，直接处理点击
-        if let coordinator = coordinator {
-            print("ClickableTextField: coordinator exists")
-            coordinator.handleClick()
-        } else {
-            print("ClickableTextField: coordinator is nil")
-        }
-    }
-    
-    override func mouseUp(with event: NSEvent) {
-        print("ClickableTextField mouseUp called")
-        // 也尝试在 mouseUp 中处理
-    }
-    
-    override var acceptsFirstResponder: Bool {
-        return true
-    }
-}
+// MARK: - Shortcut Recorder View (NSViewRepresentable)
 
 struct ShortcutRecorderView: NSViewRepresentable {
-    @Binding var keyCode: UInt32
-    @Binding var modifiers: UInt32
+    @Binding var keyCombo: KeyCombo
+    var actionType: ShortcutActionType?
     
     func makeNSView(context: Context) -> NSView {
-        // 创建一个容器视图
         let containerView = NSView()
         containerView.wantsLayer = true
-        containerView.layer?.cornerRadius = 6
+        containerView.layer?.cornerRadius = LTDesign.CornerRadius.small
         containerView.layer?.borderWidth = 1
         containerView.layer?.borderColor = NSColor.secondaryLabelColor.withAlphaComponent(0.2).cgColor
         containerView.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
@@ -46,18 +22,18 @@ struct ShortcutRecorderView: NSViewRepresentable {
         textField.isBordered = false
         textField.drawsBackground = false
         textField.alignment = .center
-        textField.placeholderString = "点击设置快捷键"
-        textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
+        textField.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        textField.placeholderString = "点击录制"
+        textField.stringValue = formatShortcut(keyCombo)
         textField.coordinator = context.coordinator
         
-        // 添加一个透明的覆盖按钮来捕获点击
         let button = NSButton()
         button.isBordered = false
         button.title = ""
         button.target = context.coordinator
         button.action = #selector(Coordinator.buttonClicked)
         button.bezelStyle = .rounded
-        button.alphaValue = 0.01 // 几乎透明但仍然可以点击
+        button.alphaValue = 0.01
         
         containerView.addSubview(textField)
         containerView.addSubview(button)
@@ -65,78 +41,116 @@ struct ShortcutRecorderView: NSViewRepresentable {
         textField.translatesAutoresizingMaskIntoConstraints = false
         button.translatesAutoresizingMaskIntoConstraints = false
         
+        // Add clear button (xmark) if shortcut is set
+        let clearButton = NSButton()
+        clearButton.symbolConfiguration = .init(scale: .small)
+        clearButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "清除")
+        clearButton.isBordered = false
+        clearButton.bezelStyle = .inline
+        clearButton.contentTintColor = .tertiaryLabelColor
+        clearButton.target = context.coordinator
+        clearButton.action = #selector(Coordinator.clearButtonClicked)
+        clearButton.translatesAutoresizingMaskIntoConstraints = false
+        clearButton.isHidden = !keyCombo.isValid
+        
+        containerView.addSubview(clearButton)
+        
         NSLayoutConstraint.activate([
             textField.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 4),
-            textField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4),
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            textField.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor, constant: -4),
+            
+            clearButton.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            clearButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4),
+            clearButton.widthAnchor.constraint(equalToConstant: 16),
+            clearButton.heightAnchor.constraint(equalToConstant: 16),
             
             button.topAnchor.constraint(equalTo: containerView.topAnchor),
             button.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            button.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            button.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor), // Don't cover clear button
             button.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
         ])
         
         context.coordinator.textField = textField
         context.coordinator.containerView = containerView
-        context.coordinator.keyCodeBinding = _keyCode
-        context.coordinator.modifiersBinding = _modifiers
+        context.coordinator.clearButton = clearButton
+        context.coordinator.keyComboBinding = _keyCombo
+        context.coordinator.actionType = actionType
+        
         return containerView
     }
     
     func updateNSView(_ nsView: NSView, context: Context) {
-        // 找到文本字段并更新
         if let textField = nsView.subviews.first(where: { $0 is ClickableTextField }) as? ClickableTextField {
-            // 只在非录制状态时更新显示
             if !context.coordinator.isRecording {
-                textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
+                textField.stringValue = formatShortcut(keyCombo)
             }
             textField.coordinator = context.coordinator
         }
-        context.coordinator.keyCodeBinding = _keyCode
-        context.coordinator.modifiersBinding = _modifiers
+        
+        // Update clear button visibility
+        if let clearButton = nsView.subviews.first(where: { ($0 as? NSButton)?.action == #selector(Coordinator.clearButtonClicked) }) as? NSButton {
+             clearButton.isHidden = !keyCombo.isValid || context.coordinator.isRecording
+        }
+        
+        context.coordinator.keyComboBinding = _keyCombo
+        context.coordinator.actionType = actionType
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(keyCode: keyCode, modifiers: modifiers)
+        Coordinator(keyCombo: _keyCombo)
     }
+    
+    // MARK: - Coordinator
     
     class Coordinator: NSObject {
         var textField: NSTextField?
         var containerView: NSView?
+        var clearButton: NSButton?
         var isRecording = false
-        var keyCodeBinding: Binding<UInt32>?
-        var modifiersBinding: Binding<UInt32>?
-        var eventMonitor: Any?
+        var keyComboBinding: Binding<KeyCombo>
+        var actionType: ShortcutActionType?
         
-        init(keyCode: UInt32, modifiers: UInt32) {
+        var eventMonitor: Any?
+        var timeoutTimer: Timer?
+        
+        init(keyCombo: Binding<KeyCombo>) {
+            self.keyComboBinding = keyCombo
             super.init()
         }
         
         @objc func buttonClicked() {
-            print("buttonClicked called")
             handleClick()
         }
         
+        @objc func clearButtonClicked() {
+            cancelRecording()
+            keyComboBinding.wrappedValue = .zero
+        }
+        
         func handleClick() {
-            print("handleClick called")
-            guard let textField = textField, !isRecording else {
-                print("handleClick: guard failed - textField: \(textField != nil), isRecording: \(isRecording)")
-                return
-            }
+            guard let textField = textField, !isRecording else { return }
             
-            print("handleClick: starting recording")
-            // 确保文本字段获得焦点
             textField.window?.makeFirstResponder(textField)
             
             isRecording = true
             textField.stringValue = "按下快捷键..."
             textField.textColor = .white
+            clearButton?.isHidden = true
             
-            // 更新容器样式
+            // Update container style with animation
             containerView?.layer?.backgroundColor = NSColor.systemBlue.cgColor
             containerView?.layer?.borderColor = NSColor.systemBlue.cgColor
             
-            // 开始监听键盘事件
+            // Add pulse animation
+            addPulseAnimation()
+            
+            // Start timeout timer (5 seconds)
+            timeoutTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+                self?.cancelRecording()
+            }
+            
+            // Start listening for keyboard events
             eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
                 return self?.handleKeyEvent(event) ?? event
             }
@@ -145,66 +159,116 @@ struct ShortcutRecorderView: NSViewRepresentable {
         func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
             guard isRecording else { return event }
             
-            // 忽略某些特殊键
-            if event.keyCode == 53 { // Escape
+            // Handle Escape to cancel
+            if event.keyCode == kVK_Escape {
                 cancelRecording()
                 return nil
             }
             
-            // 只处理 keyDown 事件
-            guard event.type == .keyDown else {
-                return event
+            // Only process keyDown events (not just modifiers)
+            guard event.type == .keyDown else { return event }
+            
+            // Get modifiers
+            var modifiers: Int = 0
+            if event.modifierFlags.contains(.command) { modifiers |= cmdKey }
+            if event.modifierFlags.contains(.option) { modifiers |= optionKey }
+            if event.modifierFlags.contains(.control) { modifiers |= controlKey }
+            if event.modifierFlags.contains(.shift) { modifiers |= shiftKey }
+            
+            // Require at least one modifier OR function key
+            // For simplicity, we enforce modifiers for most keys to avoid typing conflict
+            let isFunctionKey = (event.modifierFlags.contains(.function))
+            if modifiers == 0 && !isFunctionKey {
+                 // Ignore plain keys without modifiers
+                 return event
             }
             
-            // 获取修饰键
-            var carbonModifiers: UInt32 = 0
-            if event.modifierFlags.contains(.command) {
-                carbonModifiers |= UInt32(cmdKey)
-            }
-            if event.modifierFlags.contains(.option) {
-                carbonModifiers |= UInt32(optionKey)
-            }
-            if event.modifierFlags.contains(.control) {
-                carbonModifiers |= UInt32(controlKey)
-            }
-            if event.modifierFlags.contains(.shift) {
-                carbonModifiers |= UInt32(shiftKey)
+            let keyCombo = KeyCombo(keyCode: Int(event.keyCode), modifiers: modifiers)
+            
+            // Check for conflicts
+            if let actionType = actionType {
+                let validation = EnhancedShortcutManager.shared.validate(keyCombo, observing: actionType)
+                if case .conflict(let msg) = validation {
+                    showConflictWarning(message: msg)
+                    return nil // Consume event
+                }
             }
             
-            // 确保至少有一个修饰键
-            guard carbonModifiers > 0 else {
-                return event
-            }
-            
-            // 更新快捷键
-            let newKeyCode = UInt32(event.keyCode)
-            let newModifiers = carbonModifiers
-            
-            // 通过 binding 更新值
-            keyCodeBinding?.wrappedValue = newKeyCode
-            modifiersBinding?.wrappedValue = newModifiers
+            // Update shortcut
+            keyComboBinding.wrappedValue = keyCombo
             
             finishRecording()
             return nil
+        }
+        
+        private func showConflictWarning(message: String) {
+            // Flash red
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { [weak self] in
+                self?.containerView?.layer?.backgroundColor = NSColor.systemBlue.cgColor
+            }
+            containerView?.layer?.backgroundColor = NSColor.systemRed.cgColor
+            CATransaction.commit()
+            
+            let originalText = textField?.stringValue
+            textField?.stringValue = message
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                if self?.isRecording == true {
+                    self?.textField?.stringValue = "按下快捷键..."
+                }
+            }
+        }
+        
+        private func addPulseAnimation() {
+            let animation = CABasicAnimation(keyPath: "opacity")
+            animation.fromValue = 0.8
+            animation.toValue = 1.0
+            animation.duration = 0.8
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            containerView?.layer?.add(animation, forKey: "pulse")
+        }
+        
+        private func removePulseAnimation() {
+            containerView?.layer?.removeAnimation(forKey: "pulse")
         }
         
         func cancelRecording() {
             isRecording = false
             updateTextFieldDisplay()
             resetStyle()
-            if let monitor = eventMonitor {
-                NSEvent.removeMonitor(monitor)
-                eventMonitor = nil
-            }
+            removePulseAnimation()
+            cleanup()
         }
         
         func finishRecording() {
             isRecording = false
             updateTextFieldDisplay()
             resetStyle()
+            removePulseAnimation()
+            cleanup()
+            
+            // Success feedback
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { [weak self] in
+                self?.containerView?.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+            }
+            containerView?.layer?.backgroundColor = NSColor.systemGreen.withAlphaComponent(0.3).cgColor
+            CATransaction.commit()
+        }
+        
+        private func cleanup() {
+            timeoutTimer?.invalidate()
+            timeoutTimer = nil
             if let monitor = eventMonitor {
                 NSEvent.removeMonitor(monitor)
                 eventMonitor = nil
+            }
+            
+            // Show clear button again if valid
+            if keyComboBinding.wrappedValue.isValid {
+                 clearButton?.isHidden = false
             }
         }
         
@@ -215,41 +279,31 @@ struct ShortcutRecorderView: NSViewRepresentable {
         }
         
         private func updateTextFieldDisplay() {
-            guard let textField = textField,
-                  let keyCode = keyCodeBinding?.wrappedValue,
-                  let modifiers = modifiersBinding?.wrappedValue else { return }
-            textField.stringValue = formatShortcut(keyCode: keyCode, modifiers: modifiers)
+            guard let textField = textField else { return }
+            textField.stringValue = formatShortcut(keyComboBinding.wrappedValue)
         }
         
-        private func formatShortcut(keyCode: UInt32, modifiers: UInt32) -> String {
+        // Helper
+        private func formatShortcut(_ combo: KeyCombo) -> String {
+            guard combo.isValid else { return "未设置" }
             var parts: [String] = []
             
-            if modifiers & UInt32(cmdKey) != 0 {
-                parts.append("⌘")
-            }
-            if modifiers & UInt32(optionKey) != 0 {
-                parts.append("⌥")
-            }
-            if modifiers & UInt32(controlKey) != 0 {
-                parts.append("⌃")
-            }
-            if modifiers & UInt32(shiftKey) != 0 {
-                parts.append("⇧")
-            }
+            if combo.modifiers & cmdKey != 0 { parts.append("⌘") }
+            if combo.modifiers & optionKey != 0 { parts.append("⌥") }
+            if combo.modifiers & controlKey != 0 { parts.append("⌃") }
+            if combo.modifiers & shiftKey != 0 { parts.append("⇧") }
             
-            // 将 keyCode 转换为字符
-            if let keyChar = keyCodeToChar(keyCode) {
+            if let keyChar = keyCodeToChar(UInt32(combo.keyCode)) {
                 parts.append(keyChar)
             } else {
-                parts.append("Key(\(keyCode))")
+                parts.append("Key(\(combo.keyCode))")
             }
             
             return parts.joined()
         }
         
         private func keyCodeToChar(_ keyCode: UInt32) -> String? {
-            // 常见键码映射
-            let keyMap: [UInt32: String] = [
+             let keyMap: [UInt32: String] = [
                 0x00: "A", 0x01: "S", 0x02: "D", 0x03: "F", 0x04: "H",
                 0x05: "G", 0x06: "Z", 0x07: "X", 0x08: "C", 0x09: "V",
                 0x0B: "B", 0x0C: "Q", 0x0D: "W", 0x0E: "E", 0x0F: "R",
@@ -260,68 +314,56 @@ struct ShortcutRecorderView: NSViewRepresentable {
                 0x24: "Return", 0x25: "L", 0x26: "J", 0x27: "'", 0x28: "K",
                 0x29: ";", 0x2A: "\\", 0x2B: ",", 0x2C: "/", 0x2D: "N",
                 0x2E: "M", 0x2F: ".", 0x30: "Tab", 0x31: "Space", 0x32: "`",
-                0x33: "Delete", 0x35: "Esc", 0x37: "⌘", 0x38: "⇧", 0x39: "Caps",
-                0x3A: "⌥", 0x3B: "⌃", 0x3C: "Fn", 0x3D: "F17", 0x3E: "VolumeUp",
-                0x3F: "VolumeDown", 0x40: "Mute", 0x41: "F18", 0x43: "F19",
-                0x45: "F20", 0x47: "Clear", 0x48: "F3", 0x49: "F16", 0x4A: "F8",
-                0x4B: "F11", 0x4C: "F13", 0x4D: "F5", 0x4E: "F6", 0x4F: "F7",
-                0x50: "F12", 0x51: "F15", 0x52: "F14", 0x53: "F10", 0x54: "F9",
-                0x55: "F4", 0x56: "F2", 0x57: "F1"
+                0x33: "Delete", 0x35: "Esc"
             ]
-            
             return keyMap[keyCode]
         }
     }
-    
-    func formatShortcut(keyCode: UInt32, modifiers: UInt32) -> String {
-        var parts: [String] = []
-        
-        if modifiers & UInt32(cmdKey) != 0 {
-            parts.append("⌘")
-        }
-        if modifiers & UInt32(optionKey) != 0 {
-            parts.append("⌥")
-        }
-        if modifiers & UInt32(controlKey) != 0 {
-            parts.append("⌃")
-        }
-        if modifiers & UInt32(shiftKey) != 0 {
-            parts.append("⇧")
-        }
-        
-        // 将 keyCode 转换为字符
-        if let keyChar = keyCodeToChar(keyCode) {
-            parts.append(keyChar)
-        } else {
-            parts.append("Key(\(keyCode))")
-        }
-        
-        return parts.joined()
-    }
-    
-    func keyCodeToChar(_ keyCode: UInt32) -> String? {
-        // 常见键码映射
-        let keyMap: [UInt32: String] = [
-            0x00: "A", 0x01: "S", 0x02: "D", 0x03: "F", 0x04: "H",
-            0x05: "G", 0x06: "Z", 0x07: "X", 0x08: "C", 0x09: "V",
-            0x0B: "B", 0x0C: "Q", 0x0D: "W", 0x0E: "E", 0x0F: "R",
-            0x10: "Y", 0x11: "T", 0x12: "1", 0x13: "2", 0x14: "3",
-            0x15: "4", 0x16: "6", 0x17: "5", 0x18: "=", 0x19: "9",
-            0x1A: "7", 0x1B: "-", 0x1C: "8", 0x1D: "0", 0x1E: "]",
-            0x1F: "O", 0x20: "U", 0x21: "[", 0x22: "I", 0x23: "P",
-            0x24: "Return", 0x25: "L", 0x26: "J", 0x27: "'", 0x28: "K",
-            0x29: ";", 0x2A: "\\", 0x2B: ",", 0x2C: "/", 0x2D: "N",
-            0x2E: "M", 0x2F: ".", 0x30: "Tab", 0x31: "Space", 0x32: "`",
-            0x33: "Delete", 0x35: "Esc", 0x37: "⌘", 0x38: "⇧", 0x39: "Caps",
-            0x3A: "⌥", 0x3B: "⌃", 0x3C: "Fn", 0x3D: "F17", 0x3E: "VolumeUp",
-            0x3F: "VolumeDown", 0x40: "Mute", 0x41: "F18", 0x43: "F19",
-            0x45: "F20", 0x47: "Clear", 0x48: "F3", 0x49: "F16", 0x4A: "F8",
-            0x4B: "F11", 0x4C: "F13", 0x4D: "F5", 0x4E: "F6", 0x4F: "F7",
-            0x50: "F12", 0x51: "F15", 0x52: "F14", 0x53: "F10", 0x54: "F9",
-            0x55: "F4", 0x56: "F2", 0x57: "F1"
-        ]
-        
-        return keyMap[keyCode]
-    }
 }
 
+// MARK: - Clickable Text Field
+
+class ClickableTextField: NSTextField {
+    weak var coordinator: ShortcutRecorderView.Coordinator?
+    
+    override func mouseDown(with event: NSEvent) {
+        coordinator?.handleClick()
+    }
+    
+    override var acceptsFirstResponder: Bool { true }
+}
+
+// MARK: - Helper
+
+private func formatShortcut(_ combo: KeyCombo) -> String {
+    guard combo.isValid else { return "点击录制" }
+    var parts: [String] = []
+    
+    // Carbon modifiers mapping matches what we use in KeyCombo
+    if combo.modifiers & cmdKey != 0 { parts.append("⌘") }
+    if combo.modifiers & optionKey != 0 { parts.append("⌥") }
+    if combo.modifiers & controlKey != 0 { parts.append("⌃") }
+    if combo.modifiers & shiftKey != 0 { parts.append("⇧") }
+    
+    // Basic key mapping
+    // This duplicates the method inside Coordinator, but useful for initial render
+    // Ideally share this logic
+    return parts.joined() + (getKeyChar(UInt32(combo.keyCode)) ?? "Key")
+}
+
+private func getKeyChar(_ keyCode: UInt32) -> String? {
+    let keyMap: [UInt32: String] = [
+        0x00: "A", 0x01: "S", 0x02: "D", 0x03: "F", 0x04: "H",
+        0x05: "G", 0x06: "Z", 0x07: "X", 0x08: "C", 0x09: "V",
+        0x0B: "B", 0x0C: "Q", 0x0D: "W", 0x0E: "E", 0x0F: "R",
+        0x10: "Y", 0x11: "T", 0x12: "1", 0x13: "2", 0x14: "3",
+        0x15: "4", 0x16: "6", 0x17: "5", 0x18: "=", 0x19: "9",
+        0x1A: "7", 0x1B: "-", 0x1C: "8", 0x1D: "0", 0x1E: "]",
+        0x1F: "O", 0x20: "U", 0x21: "[", 0x22: "I", 0x23: "P",
+        0x24: "Return", 0x25: "L", 0x26: "J", 0x27: "'", 0x28: "K",
+        0x29: ";", 0x2A: "\\", 0x2B: ",", 0x2C: "/", 0x2D: "N",
+        0x2E: "M", 0x2F: ".", 0x30: "Tab", 0x31: "Space", 0x32: "`",
+        0x33: "Delete", 0x35: "Esc"
+    ]
+    return keyMap[keyCode]
+}

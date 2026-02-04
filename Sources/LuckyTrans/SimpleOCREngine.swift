@@ -139,6 +139,28 @@ public class SimpleOCREngine: NSObject {
         return try await recognizeText(from: image)
     }
 
+    /// 截取屏幕并识别文本
+    public func captureAndRecognize(completion: @escaping (Result<String, Error>) -> Void) {
+        Task { @MainActor in
+            let capture = ScreenshotCapture()
+            capture.startCapture { image in
+                guard let image = image else {
+                    // User cancelled
+                    return
+                }
+                
+                Task {
+                    do {
+                        let result = try await self.recognizeText(from: image)
+                        completion(.success(result.mergedText))
+                    } catch {
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+
     /// 更新配置
     public func updateConfiguration(_ config: Configuration) {
         self.currentConfiguration = config

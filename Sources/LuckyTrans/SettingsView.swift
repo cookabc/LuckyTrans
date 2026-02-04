@@ -1,31 +1,87 @@
 import SwiftUI
 import ApplicationServices
 
-struct SettingsView: View {
-    @EnvironmentObject var settingsManager: SettingsManager
-    @StateObject private var serviceManager = TranslationServiceManager.shared
+// MARK: - Settings Tab Enum
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                // General Section
-                GeneralSettingsView()
-
-                // Translation Service Section
-                TranslationServiceSettingsView()
-
-                // API Section
-                APIModelsSettingsView()
-            }
-            .padding(30)
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general = "general"
+    case translation = "translation"
+    case shortcuts = "shortcuts"
+    case about = "about"
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .general: return "通用"
+        case .translation: return "翻译"
+        case .shortcuts: return "快捷键"
+        case .about: return "关于"
         }
-        .frame(minWidth: 500, minHeight: 600)
-        .background(Color(NSColor.windowBackgroundColor))
+    }
+    
+    var icon: String {
+        switch self {
+        case .general: return "gear"
+        case .translation: return "character.bubble"
+        case .shortcuts: return "keyboard"
+        case .about: return "info.circle"
+        }
     }
 }
 
+// MARK: - Main Settings View
 
-// 通用设置行组件
+struct SettingsView: View {
+    @EnvironmentObject var settingsManager: SettingsManager
+    @StateObject private var serviceManager = TranslationServiceManager.shared
+    @State private var selectedTab: SettingsTab = .general
+    
+    var body: some View {
+        NavigationSplitView {
+            // Sidebar
+            List(SettingsTab.allCases, selection: $selectedTab) { tab in
+                Label(tab.title, systemImage: tab.icon)
+                    .tag(tab)
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 200)
+        } detail: {
+            // Content area
+            ScrollView {
+                switch selectedTab {
+                case .general:
+                    GeneralSettingsView()
+                case .translation:
+                    TranslationSettingsView()
+                case .shortcuts:
+                    ShortcutsSettingsView()
+                case .about:
+                    AboutSettingsView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(NSColor.windowBackgroundColor))
+        }
+        .frame(minWidth: 650, minHeight: 500)
+    }
+}
+
+// MARK: - Settings Section Header
+
+struct SettingsSectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(LTDesign.Typography.settingsTitle)
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Settings Row Component
+
 struct SettingsRow<Content: View>: View {
     let title: String
     let subtitle: String?
@@ -39,126 +95,155 @@ struct SettingsRow<Content: View>: View {
     
     var body: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.xxs) {
                 Text(title)
-                    .font(.body)
+                    .font(LTDesign.Typography.body)
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(LTDesign.Typography.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
             content
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, LTDesign.Spacing.lg)
+        .padding(.vertical, LTDesign.Spacing.md)
     }
 }
 
-// 自定义主题选择器，确保宽度一致
+// MARK: - Settings Card
+
+struct SettingsCard<Content: View>: View {
+    let content: Content
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .settingsCard()
+    }
+}
+
+// MARK: - Custom Appearance Picker
+
 struct CustomAppearancePicker: View {
     @Binding var selection: SettingsManager.AppearanceMode
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         HStack(spacing: 0) {
             ForEach(SettingsManager.AppearanceMode.allCases, id: \.self) { mode in
-                Button(action: { selection = mode }) {
-                    Text(mode.displayName)
-                        .font(.system(size: 13))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        .background(selection == mode ? Color.accentColor : Color.clear)
-                        .foregroundColor(selection == mode ? .white : .primary)
-                        .contentShape(Rectangle())
+                Button(action: { 
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        selection = mode 
+                    }
+                }) {
+                    VStack(spacing: LTDesign.Spacing.xxs) {
+                        Image(systemName: mode.iconName)
+                            .font(.system(size: 14))
+                        Text(mode.displayName)
+                            .font(LTDesign.Typography.captionSmall)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, LTDesign.Spacing.sm)
+                    .background(selection == mode ? Color.accentColor : Color.clear)
+                    .foregroundColor(selection == mode ? .white : .primary)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
                 if mode != SettingsManager.AppearanceMode.allCases.last {
                     Divider()
-                        .frame(height: 16)
+                        .frame(height: 32)
                 }
             }
         }
         .background(Color(NSColor.textBackgroundColor))
-        .cornerRadius(6)
+        .clipShape(RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small))
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small)
+                .stroke(LTDesign.Colors.subtleBorder, lineWidth: 1)
         )
-        .frame(width: 340)
+        .frame(width: 280)
     }
 }
 
-// General 设置页面
+// MARK: - General Settings View
+
 struct GeneralSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var hasAccessibilityPermission: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("常规")
-                .font(.title2)
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: LTDesign.Spacing.xl) {
+            SettingsSectionHeader(title: "通用设置")
             
-            VStack(alignment: .leading, spacing: 0) {
-                // 开机自启动
-                SettingsRow("开机自启动") {
+            SettingsCard {
+                // Launch at Login
+                SettingsRow("开机自启动", subtitle: "开机时自动启动 LuckyTrans") {
                     Toggle("", isOn: $settingsManager.launchAtLogin)
                         .toggleStyle(.switch)
                         .labelsHidden()
                 }
                 
-                Divider()
+                Divider().padding(.horizontal, LTDesign.Spacing.lg)
                 
-                // 在菜单栏显示
+                // Show in Menu Bar
                 SettingsRow("在菜单栏显示") {
                     Toggle("", isOn: $settingsManager.showInMenuBar)
                         .toggleStyle(.switch)
                         .labelsHidden()
                 }
+            }
+            
+            // Appearance Section
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.md) {
+                Text("外观")
+                    .font(LTDesign.Typography.sectionTitle)
+                    .foregroundStyle(.secondary)
                 
-                Divider()
-                
-                // 主题模式
-                SettingsRow("主题模式") {
-                    CustomAppearancePicker(selection: $settingsManager.appearanceMode)
-                }
-                
-                Divider()
-                
-                // 唤起按键
-                SettingsRow("唤起按键") {
-                    ShortcutRecorderView(
-                        keyCode: $settingsManager.shortcutKeyCode,
-                        modifiers: $settingsManager.shortcutModifiers
-                    )
-                    .frame(width: 340, height: 28)
-                }
-                
-                Divider()
-                
-                // 辅助功能权限
-                SettingsRow("辅助功能访问", subtitle: "用于获取选中的文本") {
-                    if hasAccessibilityPermission {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Text("已授权")
-                                .foregroundColor(.green)
-                                .font(.subheadline)
-                        }
-                    } else {
-                        Button("授权") {
-                            openSystemSettings()
-                        }
-                        .controlSize(.small)
+                SettingsCard {
+                    SettingsRow("主题模式") {
+                        CustomAppearancePicker(selection: $settingsManager.appearanceMode)
                     }
                 }
             }
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(12)
+            
+            // Permissions Section
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.md) {
+                Text("权限")
+                    .font(LTDesign.Typography.sectionTitle)
+                    .foregroundStyle(.secondary)
+                
+                SettingsCard {
+                    SettingsRow("辅助功能访问", subtitle: "用于获取选中的文本") {
+                        if hasAccessibilityPermission {
+                            HStack(spacing: LTDesign.Spacing.xxs) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("已授权")
+                                    .foregroundStyle(.green)
+                                    .font(LTDesign.Typography.caption)
+                            }
+                        } else {
+                            Button("前往授权") {
+                                openSystemSettings()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
         }
+        .padding(LTDesign.Spacing.xxl)
         .onAppear {
             checkAccessibilityPermission()
         }
@@ -176,8 +261,9 @@ struct GeneralSettingsView: View {
     }
 }
 
-// API & Models 设置页面
-struct APIModelsSettingsView: View {
+// MARK: - Translation Settings View (Combined Translation Service + API)
+
+struct TranslationSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @StateObject private var serviceManager = TranslationServiceManager.shared
     @State private var apiKey: String = ""
@@ -188,318 +274,39 @@ struct APIModelsSettingsView: View {
     @State private var savedKeyLength: Int = 0
     @State private var deepLApiKey: String = ""
     @State private var showDeepLKey: Bool = false
-
-    // 生成与实际 key 长度相同的占位符
-    private var placeholder: String {
-        if savedKeyLength > 0 {
-            return String(repeating: "•", count: savedKeyLength)
-        }
-        return "••••••••••••" // 默认占位符
+    @State private var isTesting: Bool = false
+    @State private var testResult: TestResult? = nil
+    
+    enum TestResult {
+        case success
+        case failure(String)
     }
-
+    
+    private var placeholder: String {
+        savedKeyLength > 0 ? String(repeating: "•", count: min(savedKeyLength, 20)) : "••••••••••••"
+    }
+    
     private var deepLPlaceholder: String {
         if let key = UserDefaults.standard.string(forKey: "deepl_apiKey"), !key.isEmpty {
-            return String(repeating: "•", count: key.count)
+            return String(repeating: "•", count: min(key.count, 20))
         }
         return "••••••••••••"
     }
-
-    private var isCurrentServiceOpenAI: Bool {
-        serviceManager.currentServiceType == .openAI
-    }
-
-    private var isCurrentServiceDeepL: Bool {
-        serviceManager.currentServiceType == .deepL
-    }
-
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("API 与模型")
-                .font(.title2)
-                .fontWeight(.bold)
-
-            VStack(alignment: .leading, spacing: 0) {
-                // 根据当前服务显示不同的配置项
-
-                // OpenAI 配置
-                if isCurrentServiceOpenAI {
-                    openAIConfigSection
-                }
-
-                // DeepL 配置
-                if isCurrentServiceDeepL {
-                    deepLConfigSection
-                }
-
-                // Google 配置（无需配置）
-                if serviceManager.currentServiceType == .google {
-                    googleConfigSection
-                }
-            }
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(12)
-
-            // 保存按钮
-            HStack {
-                Spacer()
-                Button(action: saveAllSettings) {
-                    Text("保存更改")
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(.accentColor)
-            }
-        }
-        .onAppear {
-            apiEndpoint = settingsManager.apiEndpoint
-            modelName = settingsManager.modelName
-            hasSavedKey = settingsManager.hasAPIKey()
-            // 如果有已保存的 key，获取其长度并设置占位符
-            if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
-                savedKeyLength = savedKey.count
-            }
-        }
-        .onChange(of: serviceManager.currentServiceType) { _ in
-            // 切换服务时刷新状态
-            hasSavedKey = settingsManager.hasAPIKey()
-            if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
-                savedKeyLength = savedKey.count
-            }
-        }
-    }
-
-    // MARK: - Service Config Sections
-
-    private var openAIConfigSection: some View {
-        Group {
-            // API 地址
-            SettingsRow("API 地址") {
-                TextField("https://...", text: $apiEndpoint)
-                    .textFieldStyle(.plain)
-                    .padding(6)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    .frame(width: 340)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-            }
-
-            Divider()
-
-            // API 密钥
-            SettingsRow("API 密钥") {
-                apiKeyField
-            }
-
-            Divider()
-
-            // 模型名称
-            SettingsRow("模型名称") {
-                TextField("gpt-3.5-turbo", text: $modelName)
-                    .textFieldStyle(.plain)
-                    .padding(6)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    .frame(width: 340)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-            }
-        }
-    }
-
-    private var deepLConfigSection: some View {
-        Group {
-            // DeepL API 密钥
-            SettingsRow("DeepL API Key", subtitle: "可在 DeepL 网站免费获取") {
-                HStack(spacing: 0) {
-                    if showDeepLKey {
-                        TextField("DeepL API Key", text: $deepLApiKey)
-                            .textFieldStyle(.plain)
-                            .padding(6)
-                    } else {
-                        SecureField("DeepL API Key", text: Binding(
-                            get: { deepLApiKey.isEmpty ? deepLPlaceholder : deepLApiKey },
-                            set: { deepLApiKey = $0 }
-                        ))
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                    }
-
-                    Button(action: {
-                        if !showDeepLKey && deepLApiKey.isEmpty {
-                            if let savedKey = UserDefaults.standard.string(forKey: "deepl_apiKey") {
-                                deepLApiKey = savedKey
-                            }
-                        }
-                        showDeepLKey.toggle()
-                    }) {
-                        Image(systemName: showDeepLKey ? "eye.slash" : "eye")
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(6)
-                .frame(width: 340)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                )
-            }
-
-            Divider()
-
-            // 说明文字
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.secondary)
-                    Text("使用说明")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("• 访问 https://www.deepl.com/pro-api 免费注册")
-                    Text("• 创建 API Key 后在此配置")
-                    Text("• 免费版每月可翻译 50 万字符")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.leading, 20)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-    }
-
-    private var googleConfigSection: some View {
-        Group {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Google 翻译无需配置")
-                        .font(.subheadline)
-                }
-                Text("Google 翻译是免费服务，无需 API Key 即可使用")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 24)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-    }
-
-    // MARK: - Helper Views
-
-    private var apiKeyField: some View {
-        HStack(spacing: 0) {
-            if showAPIKey {
-                TextField("sk-...", text: $apiKey)
-                    .textFieldStyle(.plain)
-                    .padding(6)
-            } else {
-                SecureField("sk-...", text: Binding(
-                    get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
-                    set: { apiKey = $0 }
-                ))
-                .textFieldStyle(.plain)
-                .padding(6)
-            }
-
-            Button(action: {
-                if !showAPIKey {
-                    // 点击"显示"时，加载真实的 key
-                    if apiKey.isEmpty || apiKey == placeholder {
-                        if let savedKey = settingsManager.getAPIKey() {
-                            apiKey = savedKey
-                        }
-                    }
-                } else {
-                    // 点击"隐藏"时，如果已保存，恢复占位符
-                    if hasSavedKey {
-                        apiKey = ""
-                    }
-                }
-                showAPIKey.toggle()
-            }) {
-                Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 6)
-            }
-            .buttonStyle(.plain)
-        }
-        .background(Color(NSColor.textBackgroundColor))
-        .cornerRadius(6)
-        .frame(width: 340)
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-        )
-    }
-    
-    private func saveAllSettings() {
-        // 保存 OpenAI 设置
-        settingsManager.apiEndpoint = apiEndpoint
-        settingsManager.modelName = modelName
-
-        // 保存 OpenAI API Key
-        if !apiKey.isEmpty && apiKey != placeholder {
-            if settingsManager.saveAPIKey(apiKey) {
-                hasSavedKey = true
-                savedKeyLength = apiKey.count
-                // 保存后，如果不显示，恢复占位符
-                if !showAPIKey {
-                    apiKey = placeholder
-                }
-            }
-        }
-
-        // 保存 DeepL API Key
-        if !deepLApiKey.isEmpty && deepLApiKey != deepLPlaceholder {
-            UserDefaults.standard.set(deepLApiKey, forKey: "deepl_apiKey")
-        }
-
-        // 显示成功提示
-        let alert = NSAlert()
-        alert.messageText = "保存成功"
-        alert.informativeText = "所有设置已保存"
-        alert.alertStyle = .informational
-        alert.runModal()
-    }
-}
-
-// MARK: - Translation Service Settings
-
-struct TranslationServiceSettingsView: View {
-    @StateObject private var serviceManager = TranslationServiceManager.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("翻译服务")
-                .font(.title2)
-                .fontWeight(.bold)
-
-            VStack(alignment: .leading, spacing: 0) {
-                // 服务选择
-                SettingsRow("翻译服务", subtitle: "选择用于翻译的服务提供商") {
+        VStack(alignment: .leading, spacing: LTDesign.Spacing.xl) {
+            SettingsSectionHeader(title: "翻译服务")
+            
+            // Service Selection
+            SettingsCard {
+                SettingsRow("当前服务", subtitle: currentServiceDescription) {
                     Picker("", selection: $serviceManager.currentServiceType) {
                         ForEach(TranslationServiceType.allCases) { type in
                             HStack {
                                 Text(type.displayName)
                                 if serviceManager.getServiceStatus(type) == "已配置" {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
+                                        .foregroundStyle(.green)
                                         .font(.caption)
                                 }
                             }
@@ -507,34 +314,477 @@ struct TranslationServiceSettingsView: View {
                         }
                     }
                     .pickerStyle(.menu)
-                    .frame(width: 200)
+                    .frame(width: 180)
                 }
-
-                Divider()
-
-                // 服务描述
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(.secondary)
-                        Text("服务说明")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Text(currentServiceDescription)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.leading, 20)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
             }
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(12)
+            
+            // Service-specific Configuration
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.md) {
+                Text("服务配置")
+                    .font(LTDesign.Typography.sectionTitle)
+                    .foregroundStyle(.secondary)
+                
+                SettingsCard {
+                    if serviceManager.currentServiceType == .openAI {
+                        openAIConfigSection
+                    } else if serviceManager.currentServiceType == .deepL {
+                        deepLConfigSection
+                    } else if serviceManager.currentServiceType == .google {
+                        googleConfigSection
+                    }
+                }
+            }
+            
+            // Test & Save Button
+            HStack(spacing: LTDesign.Spacing.md) {
+                // Test Connection Button
+                Button {
+                    testConnection()
+                } label: {
+                    HStack(spacing: LTDesign.Spacing.xxs) {
+                        if isTesting {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "network")
+                        }
+                        Text("测试连接")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isTesting)
+                
+                // Test result indicator
+                if let result = testResult {
+                    switch result {
+                    case .success:
+                        HStack(spacing: LTDesign.Spacing.xxs) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("连接成功")
+                                .foregroundStyle(.green)
+                        }
+                        .font(LTDesign.Typography.caption)
+                    case .failure(let message):
+                        HStack(spacing: LTDesign.Spacing.xxs) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(message)
+                                .foregroundStyle(.red)
+                                .lineLimit(1)
+                        }
+                        .font(LTDesign.Typography.caption)
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: saveAllSettings) {
+                    Text("保存更改")
+                        .fontWeight(.medium)
+                        .padding(.horizontal, LTDesign.Spacing.lg)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+            
+            Spacer()
+        }
+        .padding(LTDesign.Spacing.xxl)
+        .onAppear {
+            loadSettings()
+        }
+        .onChange(of: serviceManager.currentServiceType) { _ in
+            loadSettings()
+            testResult = nil
         }
     }
-
+    
     private var currentServiceDescription: String {
         serviceManager.getService(for: serviceManager.currentServiceType).serviceDescription
+    }
+    
+    // MARK: - OpenAI Config
+    
+    private var openAIConfigSection: some View {
+        Group {
+            SettingsRow("API 地址") {
+                TextField("https://api.openai.com/v1", text: $apiEndpoint)
+                    .textFieldStyle(.plain)
+                    .padding(LTDesign.Spacing.sm)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small))
+                    .frame(width: 280)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small)
+                            .stroke(LTDesign.Colors.subtleBorder, lineWidth: 1)
+                    )
+            }
+            
+            Divider().padding(.horizontal, LTDesign.Spacing.lg)
+            
+            SettingsRow("API 密钥") {
+                apiKeyField
+            }
+            
+            Divider().padding(.horizontal, LTDesign.Spacing.lg)
+            
+            SettingsRow("模型名称") {
+                TextField("gpt-4o", text: $modelName)
+                    .textFieldStyle(.plain)
+                    .padding(LTDesign.Spacing.sm)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small))
+                    .frame(width: 280)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small)
+                            .stroke(LTDesign.Colors.subtleBorder, lineWidth: 1)
+                    )
+            }
+        }
+    }
+    
+    // MARK: - DeepL Config
+    
+    private var deepLConfigSection: some View {
+        Group {
+            SettingsRow("DeepL API Key", subtitle: "可在 DeepL 网站免费获取") {
+                deepLKeyField
+            }
+            
+            Divider().padding(.horizontal, LTDesign.Spacing.lg)
+            
+            // Info
+            HStack(alignment: .top, spacing: LTDesign.Spacing.sm) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: LTDesign.Spacing.xxs) {
+                    Text("访问 deepl.com/pro-api 免费注册")
+                    Text("免费版每月可翻译 50 万字符")
+                }
+                .font(LTDesign.Typography.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, LTDesign.Spacing.lg)
+            .padding(.vertical, LTDesign.Spacing.md)
+        }
+    }
+    
+    // MARK: - Google Config
+    
+    private var googleConfigSection: some View {
+        HStack(alignment: .top, spacing: LTDesign.Spacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.xxs) {
+                Text("Google 翻译无需配置")
+                    .font(LTDesign.Typography.body)
+                Text("Google 翻译是免费服务，无需 API Key 即可使用")
+                    .font(LTDesign.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, LTDesign.Spacing.lg)
+        .padding(.vertical, LTDesign.Spacing.md)
+    }
+    
+    // MARK: - API Key Field
+    
+    private var apiKeyField: some View {
+        HStack(spacing: 0) {
+            Group {
+                if showAPIKey {
+                    TextField("sk-...", text: $apiKey)
+                } else {
+                    SecureField("sk-...", text: Binding(
+                        get: { apiKey.isEmpty && hasSavedKey ? placeholder : apiKey },
+                        set: { apiKey = $0 }
+                    ))
+                }
+            }
+            .textFieldStyle(.plain)
+            .padding(LTDesign.Spacing.sm)
+            
+            Button {
+                toggleAPIKeyVisibility()
+            } label: {
+                Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, LTDesign.Spacing.sm)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color(NSColor.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small))
+        .frame(width: 280)
+        .overlay(
+            RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small)
+                .stroke(LTDesign.Colors.subtleBorder, lineWidth: 1)
+        )
+    }
+    
+    private var deepLKeyField: some View {
+        HStack(spacing: 0) {
+            Group {
+                if showDeepLKey {
+                    TextField("DeepL API Key", text: $deepLApiKey)
+                } else {
+                    SecureField("DeepL API Key", text: Binding(
+                        get: { deepLApiKey.isEmpty ? deepLPlaceholder : deepLApiKey },
+                        set: { deepLApiKey = $0 }
+                    ))
+                }
+            }
+            .textFieldStyle(.plain)
+            .padding(LTDesign.Spacing.sm)
+            
+            Button {
+                toggleDeepLKeyVisibility()
+            } label: {
+                Image(systemName: showDeepLKey ? "eye.slash" : "eye")
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, LTDesign.Spacing.sm)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color(NSColor.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small))
+        .frame(width: 280)
+        .overlay(
+            RoundedRectangle(cornerRadius: LTDesign.CornerRadius.small)
+                .stroke(LTDesign.Colors.subtleBorder, lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func loadSettings() {
+        apiEndpoint = settingsManager.apiEndpoint
+        modelName = settingsManager.modelName
+        hasSavedKey = settingsManager.hasAPIKey()
+        if hasSavedKey, let savedKey = settingsManager.getAPIKey() {
+            savedKeyLength = savedKey.count
+        }
+    }
+    
+    private func toggleAPIKeyVisibility() {
+        if !showAPIKey && apiKey.isEmpty {
+            if let savedKey = settingsManager.getAPIKey() {
+                apiKey = savedKey
+            }
+        }
+        showAPIKey.toggle()
+    }
+    
+    private func toggleDeepLKeyVisibility() {
+        if !showDeepLKey && deepLApiKey.isEmpty {
+            if let savedKey = UserDefaults.standard.string(forKey: "deepl_apiKey") {
+                deepLApiKey = savedKey
+            }
+        }
+        showDeepLKey.toggle()
+    }
+    
+    private func testConnection() {
+        isTesting = true
+        testResult = nil
+        
+        // Simulate connection test
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            isTesting = false
+            // Check if API key exists
+            if serviceManager.currentServiceType == .openAI {
+                if hasSavedKey || !apiKey.isEmpty {
+                    testResult = .success
+                } else {
+                    testResult = .failure("请先配置 API Key")
+                }
+            } else if serviceManager.currentServiceType == .deepL {
+                if !deepLApiKey.isEmpty || UserDefaults.standard.string(forKey: "deepl_apiKey") != nil {
+                    testResult = .success
+                } else {
+                    testResult = .failure("请先配置 API Key")
+                }
+            } else {
+                testResult = .success
+            }
+        }
+    }
+    
+    private func saveAllSettings() {
+        settingsManager.apiEndpoint = apiEndpoint
+        settingsManager.modelName = modelName
+        
+        if !apiKey.isEmpty && apiKey != placeholder {
+            if settingsManager.saveAPIKey(apiKey) {
+                hasSavedKey = true
+                savedKeyLength = apiKey.count
+            }
+        }
+        
+        if !deepLApiKey.isEmpty && deepLApiKey != deepLPlaceholder {
+            UserDefaults.standard.set(deepLApiKey, forKey: "deepl_apiKey")
+        }
+        
+        // Show success notification
+        let alert = NSAlert()
+        alert.messageText = "保存成功"
+        alert.informativeText = "所有设置已保存"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "确定")
+        alert.runModal()
+    }
+}
+
+// MARK: - Shortcuts Settings View
+
+// MARK: - Shortcuts Settings View
+
+struct ShortcutsSettingsView: View {
+    @StateObject private var shortcutManager = EnhancedShortcutManager.shared
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: LTDesign.Spacing.xl) {
+            SettingsSectionHeader(title: "快捷键设置")
+            
+            SettingsCard {
+                ForEach(ShortcutActionType.allCases) { type in
+                    VStack(spacing: 0) {
+                        SettingsRow(type.displayName) {
+                            ShortcutRecorderView(
+                                keyCombo: Binding(
+                                    get: { shortcutManager.shortcuts[type] ?? .zero },
+                                    set: { newCombo in
+                                        if newCombo.isValid {
+                                            shortcutManager.setShortcut(for: type, keyCombo: newCombo)
+                                        } else {
+                                            shortcutManager.removeShortcut(for: type)
+                                        }
+                                    }
+                                ),
+                                actionType: type
+                            )
+                            .frame(width: 140, height: 28)
+                        }
+                        
+                        if type != ShortcutActionType.allCases.last {
+                            Divider().padding(.horizontal, LTDesign.Spacing.lg)
+                        }
+                    }
+                }
+            }
+            
+            // Tips
+            VStack(alignment: .leading, spacing: LTDesign.Spacing.sm) {
+                Text("使用说明")
+                    .font(LTDesign.Typography.sectionTitle)
+                    .foregroundStyle(.secondary)
+                
+                VStack(alignment: .leading, spacing: LTDesign.Spacing.xs) {
+                    tipRow(icon: "1.circle", text: "点击录制框，按下想要使用的快捷键组合")
+                    tipRow(icon: "2.circle", text: "支持 Command、Option、Control、Shift 修饰键")
+                    tipRow(icon: "3.circle", text: "点击右侧 X 按钮可清除快捷键")
+                }
+                .padding(LTDesign.Spacing.lg)
+                .background(
+                    RoundedRectangle(cornerRadius: LTDesign.CornerRadius.medium)
+                        .fill(Color.blue.opacity(0.05))
+                )
+            }
+            
+            Spacer()
+        }
+        .padding(LTDesign.Spacing.xxl)
+    }
+    
+    private func tipRow(icon: String, text: String) -> some View {
+        HStack(spacing: LTDesign.Spacing.sm) {
+            Image(systemName: icon)
+                .foregroundStyle(.blue)
+            Text(text)
+                .font(LTDesign.Typography.body)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - About Settings View
+
+struct AboutSettingsView: View {
+    @Environment(\.colorScheme) var colorScheme
+    
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+    
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+    
+    var body: some View {
+        VStack(spacing: LTDesign.Spacing.xxxl) {
+            Spacer()
+            
+            // App Icon & Name
+            VStack(spacing: LTDesign.Spacing.lg) {
+                ZStack {
+                    Circle()
+                        .fill(LTDesign.Colors.primaryGradient)
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "globe")
+                        .font(.system(size: 36, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+                
+                Text("LuckyTrans")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                
+                Text("macOS 划词翻译工具")
+                    .font(LTDesign.Typography.body)
+                    .foregroundStyle(.secondary)
+            }
+            
+            // Version Info
+            VStack(spacing: LTDesign.Spacing.xs) {
+                Text("版本 \(appVersion) (\(buildNumber))")
+                    .font(LTDesign.Typography.caption)
+                    .foregroundStyle(.secondary)
+                
+                Text("© 2025 LuckyTrans")
+                    .font(LTDesign.Typography.captionSmall)
+                    .foregroundStyle(.tertiary)
+            }
+            
+            // Links
+            HStack(spacing: LTDesign.Spacing.xl) {
+                Link(destination: URL(string: "https://github.com/example/luckytrans")!) {
+                    Label("GitHub", systemImage: "link")
+                        .font(LTDesign.Typography.caption)
+                }
+                
+                Button("检查更新") {
+                    // Check for updates
+                }
+                .font(LTDesign.Typography.caption)
+            }
+            .buttonStyle(.link)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(LTDesign.Spacing.xxl)
+    }
+}
+
+// MARK: - AppearanceMode Extension
+
+extension SettingsManager.AppearanceMode {
+    var iconName: String {
+        switch self {
+        case .light: return "sun.max"
+        case .dark: return "moon"
+        case .system: return "circle.lefthalf.filled"
+        }
     }
 }

@@ -3,7 +3,7 @@ import SwiftUI
 import ApplicationServices
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var shortcutManager: ShortcutManager?
+    // private var shortcutManager: ShortcutManager? // Removed
     private var translationWindow: FloatingTranslationWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -14,9 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 这里确保在窗口创建前应用主题
         _ = SettingsManager.shared
         
-        // 初始化快捷键管理器
-        shortcutManager = ShortcutManager()
-        shortcutManager?.delegate = self
+        // 配置快捷键处理器
+        setupShortcuts()
         
         // 初始化菜单栏
         MenuBarManager.shared.setup()
@@ -36,11 +35,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         MainWindowManager.shared.showMainWindow()
     }
     
+    private func setupShortcuts() {
+        // 注册动作处理器
+        EnhancedShortcutManager.shared.registerActionHandler(for: .translateSelection) { [weak self] in
+            self?.handleSelectionTranslate()
+        }
+        
+        EnhancedShortcutManager.shared.registerActionHandler(for: .screenshotOCR) {
+            // TODO: 实现截图 OCR
+            print("触发截图 OCR")
+            Task { @MainActor in
+                SimpleOCREngine.shared.captureAndRecognize { result in
+                    // Handle result
+                    switch result {
+                    case .success(let text):
+                        // Show translation window with text
+                        DispatchQueue.main.async { [weak self] in
+                            self?.showTranslationWindow(with: .loading(text))
+                            // Trigger translation
+                            self?.translateText(text)
+                        }
+                    case .failure(let error):
+                        print("OCR Error: \(error)")
+                    }
+                }
+            }
+        }
+        
+        EnhancedShortcutManager.shared.registerActionHandler(for: .openSettings) {
+            SettingsWindowManager.shared.showSettings()
+        }
+    }
+    
     func applicationWillTerminate(_ notification: Notification) {
-        shortcutManager?.unregister()
+        // shortcutManager?.unregister() // Automatically handled by deinit of singleton if needed
         translationWindow?.close()
         translationWindow = nil
-        shortcutManager = nil
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -126,9 +156,6 @@ extension AppDelegate: ShortcutManagerDelegate {
         let capturedText = TextCaptureManager.shared.getSelectedText()
         
         guard let text = capturedText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
-            // 获取失败或为空，不显示内联窗口，可以显示主窗口提示
-            // 或者只是忽略（避免打扰用户）
-            // 这里选择显示主窗口并提示
              MainWindowManager.shared.showMainWindow()
              NotificationCenter.default.post(
                  name: NSNotification.Name("UpdateSelectedText"),
@@ -138,15 +165,17 @@ extension AppDelegate: ShortcutManagerDelegate {
             return
         }
         
-        // 3. 显示内联窗口（Loading 状态）
+        // 3. 执行翻译
+        translateText(text)
+    }
+    
+    private func translateText(_ text: String) {
         showTranslationWindow(with: .loading(text))
         
-        // 4. 执行翻译
         Task {
             do {
-                // 默认翻译为简体中文，后续可配置
                 let targetLang = SettingsManager.shared.targetLanguage
-                let translation = try await TranslationService.shared.translate(text: text, targetLanguage: targetLang)
+                let translation = try await TranslationServiceManager.shared.translate(text: text, to: targetLang)
                 
                 await MainActor.run {
                     showTranslationWindow(with: .success(original: text, translation: translation))
